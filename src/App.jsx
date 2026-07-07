@@ -1,0 +1,1218 @@
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import {
+  LayoutDashboard,
+  Users,
+  MessageSquareText,
+  CalendarClock,
+  Compass as CompassIcon,
+  LogOut,
+  Plus,
+  X,
+  Check,
+  ChevronRight,
+  UserCircle2,
+  Send,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import {
+  collection,
+  addDoc,
+  doc,
+  setDoc,
+  updateDoc,
+  onSnapshot,
+} from "firebase/firestore";
+import { db } from "./firebase";
+
+/* ---------------------------------------------------------------------- */
+/*  Tokens                                                                 */
+/* ---------------------------------------------------------------------- */
+const INK = "#232A22";
+const PAPER = "#EEF0E9";
+const PAPER_RAISED = "#F7F8F3";
+const LINE = "#D9DBCF";
+const NAVY = "#22314A";
+const NAVY_SOFT = "#3A4A66";
+
+const DISC_INFO = {
+  D: { nome: "Dominância", cor: "#B23A2E", desc: "Direto, decidido e orientado a resultados. Prefere autonomia, ritmo acelerado e desafios concretos." },
+  I: { nome: "Influência", cor: "#C8952B", desc: "Comunicativo, entusiasta e persuasivo. Motiva pessoas e constrói relações com facilidade." },
+  S: { nome: "Estabilidade", cor: "#3F7A5E", desc: "Paciente, leal e colaborativo. Valoriza consistência, cooperação e ambientes previsíveis." },
+  C: { nome: "Conformidade", cor: "#35577A", desc: "Analítico, preciso e organizado. Busca qualidade, dados e processos bem definidos." },
+};
+
+const DISC_BLOCKS = [
+  { D: "Decidido", I: "Entusiasmado", S: "Paciente", C: "Cauteloso" },
+  { D: "Direto", I: "Sociável", S: "Constante", C: "Preciso" },
+  { D: "Competitivo", I: "Persuasivo", S: "Leal", C: "Analítico" },
+  { D: "Ousado", I: "Expressivo", S: "Calmo", C: "Organizado" },
+  { D: "Assertivo", I: "Otimista", S: "Cooperativo", C: "Detalhista" },
+  { D: "Independente", I: "Comunicativo", S: "Previsível", C: "Criterioso" },
+  { D: "Exigente", I: "Espontâneo", S: "Gentil", C: "Sistemático" },
+  { D: "Determinado", I: "Envolvente", S: "Discreto", C: "Meticuloso" },
+  { D: "Impaciente", I: "Animado", S: "Tolerante", C: "Formal" },
+  { D: "Firme", I: "Carismático", S: "Estável", C: "Reservado" },
+  { D: "Enérgico", I: "Falante", S: "Consistente", C: "Rigoroso" },
+  { D: "Confiante", I: "Popular", S: "Tranquilo", C: "Prudente" },
+];
+
+const FEEDBACK_TIPOS = [
+  { id: "reconhecimento", label: "Reconhecimento", cor: "#3F7A5E" },
+  { id: "desenvolvimento", label: "Desenvolvimento", cor: "#C8952B" },
+  { id: "alinhamento", label: "Alinhamento", cor: "#35577A" },
+];
+
+/* ---------------------------------------------------------------------- */
+/*  Helpers                                                                */
+/* ---------------------------------------------------------------------- */
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+
+const fmtData = (iso) => {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+};
+
+/* ---------------------------------------------------------------------- */
+/*  Compass — signature DISC visual                                       */
+/* ---------------------------------------------------------------------- */
+function Compass({ scores, size = 200 }) {
+  const c = size / 2;
+  const maxR = size * 0.42;
+  const baseHalf = size * 0.045;
+
+  const needle = (angleDeg, value, color, label) => {
+    const rad = (angleDeg * Math.PI) / 180;
+    const len = size * 0.14 + (value / 100) * maxR;
+    const tip = [c + len * Math.cos(rad), c + len * Math.sin(rad)];
+    const p1 = [
+      c + baseHalf * Math.cos(rad - Math.PI / 2),
+      c + baseHalf * Math.sin(rad - Math.PI / 2),
+    ];
+    const p2 = [
+      c + baseHalf * Math.cos(rad + Math.PI / 2),
+      c + baseHalf * Math.sin(rad + Math.PI / 2),
+    ];
+    const labelPos = [
+      c + (len + 16) * Math.cos(rad),
+      c + (len + 16) * Math.sin(rad),
+    ];
+    return (
+      <g key={label}>
+        <polygon
+          points={`${p1.join(",")} ${tip.join(",")} ${p2.join(",")}`}
+          fill={color}
+          opacity="0.92"
+        />
+        <text
+          x={labelPos[0]}
+          y={labelPos[1]}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fontFamily="IBM Plex Mono, monospace"
+          fontSize={size * 0.06}
+          fontWeight="600"
+          fill={INK}
+        >
+          {label}
+        </text>
+      </g>
+    );
+  };
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {[0.2, 0.4, 0.6, 0.8, 1].map((f) => (
+        <circle
+          key={f}
+          cx={c}
+          cy={c}
+          r={maxR * f}
+          fill="none"
+          stroke={LINE}
+          strokeWidth="1"
+        />
+      ))}
+      <line x1={c} y1={c - maxR - 14} x2={c} y2={c + maxR + 14} stroke={LINE} strokeWidth="1" />
+      <line x1={c - maxR - 14} y1={c} x2={c + maxR + 14} y2={c} stroke={LINE} strokeWidth="1" />
+      {needle(-90, scores.D, DISC_INFO.D.cor, "D")}
+      {needle(0, scores.I, DISC_INFO.I.cor, "I")}
+      {needle(90, scores.S, DISC_INFO.S.cor, "S")}
+      {needle(180, scores.C, DISC_INFO.C.cor, "C")}
+      <circle cx={c} cy={c} r={size * 0.02} fill={INK} />
+    </svg>
+  );
+}
+
+function MiniCompass({ scores }) {
+  return <Compass scores={scores} size={72} />;
+}
+
+/* ---------------------------------------------------------------------- */
+/*  Shared bits                                                           */
+/* ---------------------------------------------------------------------- */
+function Card({ children, style = {} }) {
+  return (
+    <div
+      style={{
+        background: PAPER_RAISED,
+        border: `1px solid ${LINE}`,
+        borderRadius: "4px",
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Button({ children, onClick, variant = "primary", type = "button", disabled, style = {} }) {
+  const base = {
+    fontFamily: "IBM Plex Sans, sans-serif",
+    fontSize: "13.5px",
+    fontWeight: 600,
+    padding: "10px 18px",
+    borderRadius: "3px",
+    cursor: disabled ? "not-allowed" : "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    border: "1px solid transparent",
+    opacity: disabled ? 0.5 : 1,
+    transition: "opacity .15s ease, transform .1s ease",
+  };
+  const variants = {
+    primary: { background: NAVY, color: "#fff" },
+    ghost: { background: "transparent", color: NAVY, border: `1px solid ${LINE}` },
+    danger: { background: "transparent", color: "#B23A2E", border: `1px solid #B23A2E33` },
+  };
+  return (
+    <button
+      type={type}
+      disabled={disabled}
+      onClick={onClick}
+      style={{ ...base, ...variants[variant], ...style }}
+      onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.98)")}
+      onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <label style={{ display: "block", marginBottom: "14px" }}>
+      <span
+        style={{
+          display: "block",
+          fontFamily: "IBM Plex Mono, monospace",
+          fontSize: "11px",
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+          color: NAVY_SOFT,
+          marginBottom: "6px",
+        }}
+      >
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+const inputStyle = {
+  width: "100%",
+  fontFamily: "IBM Plex Sans, sans-serif",
+  fontSize: "14px",
+  padding: "10px 12px",
+  border: `1px solid ${LINE}`,
+  borderRadius: "3px",
+  background: "#fff",
+  color: INK,
+  boxSizing: "border-box",
+};
+
+function Badge({ children, color }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        fontFamily: "IBM Plex Mono, monospace",
+        fontSize: "11px",
+        fontWeight: 600,
+        letterSpacing: "0.03em",
+        padding: "3px 8px",
+        borderRadius: "3px",
+        color: "#fff",
+        background: color,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/*  Auth screens                                                          */
+/* ---------------------------------------------------------------------- */
+function AuthScreen({ users, onLogin, onRegister }) {
+  const [mode, setMode] = useState("login");
+  const [error, setError] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [nome, setNome] = useState("");
+  const [role, setRole] = useState("colaborador");
+  const [gestorId, setGestorId] = useState("");
+
+  const gestores = users.filter((u) => u.role === "gestor");
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    const u = users.find((x) => x.username === username.trim().toLowerCase());
+    if (!u || u.password !== password) {
+      setError("Usuário ou senha incorretos.");
+      return;
+    }
+    setError("");
+    onLogin(u);
+  };
+
+  const handleRegister = (e) => {
+    e.preventDefault();
+    const uname = username.trim().toLowerCase();
+    if (!uname || !password || !nome.trim()) {
+      setError("Preencha nome, usuário e senha.");
+      return;
+    }
+    if (users.some((x) => x.username === uname)) {
+      setError("Esse usuário já existe.");
+      return;
+    }
+    if (role === "colaborador" && gestores.length > 0 && !gestorId) {
+      setError("Selecione o gestor responsável.");
+      return;
+    }
+    const novo = {
+      id: uid(),
+      username: uname,
+      password,
+      name: nome.trim(),
+      role: gestores.length === 0 ? "gestor" : role,
+      gestorId: role === "colaborador" ? gestorId : null,
+    };
+    setError("");
+    onRegister(novo);
+  };
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: PAPER,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "IBM Plex Sans, sans-serif",
+        color: INK,
+        padding: "24px",
+      }}
+    >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+      `}</style>
+      <div style={{ width: "100%", maxWidth: "420px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+          <Compass scores={{ D: 70, I: 45, S: 60, C: 30 }} size={40} />
+          <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY_SOFT }}>
+            Bússola de Pessoas
+          </span>
+        </div>
+        <h1
+          style={{
+            fontFamily: "Fraunces, serif",
+            fontSize: "32px",
+            fontWeight: 600,
+            margin: "0 0 6px 0",
+          }}
+        >
+          Gestão de Feedback &amp; DISC
+        </h1>
+        <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 28px 0" }}>
+          Histórico de feedback, agenda de conversas e perfil comportamental — tudo em um lugar.
+        </p>
+
+        <Card style={{ padding: "24px" }}>
+          <div style={{ display: "flex", gap: "4px", marginBottom: "20px", borderBottom: `1px solid ${LINE}` }}>
+            {["login", "register"].map((m) => (
+              <button
+                key={m}
+                onClick={() => {
+                  setMode(m);
+                  setError("");
+                }}
+                style={{
+                  flex: 1,
+                  background: "none",
+                  border: "none",
+                  padding: "10px 0",
+                  fontFamily: "IBM Plex Sans, sans-serif",
+                  fontSize: "13.5px",
+                  fontWeight: 600,
+                  color: mode === m ? NAVY : "#9AA192",
+                  borderBottom: mode === m ? `2px solid ${NAVY}` : "2px solid transparent",
+                  cursor: "pointer",
+                }}
+              >
+                {m === "login" ? "Entrar" : "Criar conta"}
+              </button>
+            ))}
+          </div>
+
+          {mode === "login" ? (
+            <form onSubmit={handleLogin}>
+              <Field label="Usuário">
+                <input style={inputStyle} value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />
+              </Field>
+              <Field label="Senha">
+                <input type="password" style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} />
+              </Field>
+              {error && <p style={{ color: "#B23A2E", fontSize: "13px", marginTop: "-4px" }}>{error}</p>}
+              <Button type="submit" style={{ width: "100%", justifyContent: "center", marginTop: "6px" }}>
+                <ShieldCheck size={16} /> Entrar
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleRegister}>
+              <Field label="Nome completo">
+                <input style={inputStyle} value={nome} onChange={(e) => setNome(e.target.value)} autoFocus />
+              </Field>
+              <Field label="Usuário">
+                <input style={inputStyle} value={username} onChange={(e) => setUsername(e.target.value)} />
+              </Field>
+              <Field label="Senha">
+                <input type="password" style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} />
+              </Field>
+              {gestores.length > 0 && (
+                <Field label="Papel">
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    {["colaborador", "gestor"].map((r) => (
+                      <button
+                        type="button"
+                        key={r}
+                        onClick={() => setRole(r)}
+                        style={{
+                          flex: 1,
+                          padding: "9px 0",
+                          borderRadius: "3px",
+                          border: `1px solid ${role === r ? NAVY : LINE}`,
+                          background: role === r ? NAVY : "#fff",
+                          color: role === r ? "#fff" : INK,
+                          fontFamily: "IBM Plex Sans, sans-serif",
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {r === "colaborador" ? "Colaborador" : "Gestor"}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+              )}
+              {gestores.length === 0 && (
+                <p style={{ fontSize: "12.5px", color: NAVY_SOFT, background: PAPER, padding: "10px", borderRadius: "3px", marginBottom: "14px" }}>
+                  Ainda não há nenhum gestor cadastrado — esta primeira conta será criada como <b>Gestor</b>.
+                </p>
+              )}
+              {role === "colaborador" && gestores.length > 0 && (
+                <Field label="Seu gestor">
+                  <select style={inputStyle} value={gestorId} onChange={(e) => setGestorId(e.target.value)}>
+                    <option value="">Selecione…</option>
+                    {gestores.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              )}
+              {error && <p style={{ color: "#B23A2E", fontSize: "13px", marginTop: "-4px" }}>{error}</p>}
+              <Button type="submit" style={{ width: "100%", justifyContent: "center", marginTop: "6px" }}>
+                <Sparkles size={16} /> Criar conta
+              </Button>
+            </form>
+          )}
+        </Card>
+        <p style={{ fontSize: "11.5px", color: "#9AA192", marginTop: "16px", lineHeight: 1.5 }}>
+          Os dados ficam salvos no Firestore, compartilhados entre todos que acessarem este site — pensado para uso interno de equipe, não para senhas sensíveis.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/*  Dashboard                                                              */
+/* ---------------------------------------------------------------------- */
+function StatCard({ label, value, accent }) {
+  return (
+    <Card style={{ padding: "18px 20px", flex: 1, minWidth: "150px" }}>
+      <div style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em", color: NAVY_SOFT }}>
+        {label}
+      </div>
+      <div style={{ fontFamily: "Fraunces, serif", fontSize: "34px", fontWeight: 600, color: accent || INK, marginTop: "6px" }}>
+        {value}
+      </div>
+    </Card>
+  );
+}
+
+function Dashboard({ user, users, feedbacks, agenda, discResults, goTo }) {
+  const isGestor = user.role === "gestor";
+  const equipe = users.filter((u) => u.gestorId === user.id);
+  const meusFeedbacks = feedbacks.filter((f) => f.autorId === user.id || f.destinatarioId === user.id);
+  const proximos = agenda
+    .filter((a) => (isGestor ? a.gestorId === user.id : a.colaboradorId === user.id) && a.status === "Agendado")
+    .sort((a, b) => (a.data + a.hora).localeCompare(b.data + b.hora))
+    .slice(0, 4);
+
+  return (
+    <div>
+      <h2 style={{ fontFamily: "Fraunces, serif", fontSize: "26px", fontWeight: 600, margin: "0 0 4px 0" }}>
+        Olá, {user.name.split(" ")[0]}
+      </h2>
+      <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 22px 0" }}>
+        {isGestor ? "Panorama da sua equipe hoje." : "Seu panorama de desenvolvimento."}
+      </p>
+
+      <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", marginBottom: "22px" }}>
+        {isGestor ? (
+          <>
+            <StatCard label="Colaboradores" value={equipe.length} />
+            <StatCard label="Feedbacks dados" value={feedbacks.filter((f) => f.autorId === user.id).length} accent="#3F7A5E" />
+            <StatCard label="Agendados" value={agenda.filter((a) => a.gestorId === user.id && a.status === "Agendado").length} accent="#C8952B" />
+          </>
+        ) : (
+          <>
+            <StatCard label="Feedbacks recebidos" value={feedbacks.filter((f) => f.destinatarioId === user.id).length} />
+            <StatCard label="Agendados" value={agenda.filter((a) => a.colaboradorId === user.id && a.status === "Agendado").length} accent="#C8952B" />
+            <StatCard label="Teste DISC" value={discResults[user.id] ? "Concluído" : "Pendente"} accent={discResults[user.id] ? "#3F7A5E" : "#B23A2E"} />
+          </>
+        )}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "16px" }} className="dash-grid">
+        <Card style={{ padding: "20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+            <h3 style={{ fontFamily: "Fraunces, serif", fontSize: "18px", margin: 0 }}>Próximas conversas</h3>
+            <button onClick={() => goTo("agenda")} style={{ background: "none", border: "none", color: NAVY, fontSize: "12.5px", cursor: "pointer", display: "flex", alignItems: "center", gap: "2px" }}>
+              Ver agenda <ChevronRight size={14} />
+            </button>
+          </div>
+          {proximos.length === 0 ? (
+            <p style={{ color: NAVY_SOFT, fontSize: "13.5px" }}>Nada agendado por enquanto.</p>
+          ) : (
+            proximos.map((a) => (
+              <div key={a.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${LINE}` }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: "14px" }}>{a.titulo}</div>
+                  <div style={{ fontSize: "12.5px", color: NAVY_SOFT }}>
+                    {isGestor ? users.find((u) => u.id === a.colaboradorId)?.name : users.find((u) => u.id === a.gestorId)?.name}
+                  </div>
+                </div>
+                <div style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "12.5px", color: NAVY_SOFT, textAlign: "right" }}>
+                  {fmtData(a.data)}
+                  <br />
+                  {a.hora}
+                </div>
+              </div>
+            ))
+          )}
+        </Card>
+
+        <Card style={{ padding: "20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+            <h3 style={{ fontFamily: "Fraunces, serif", fontSize: "18px", margin: 0 }}>Histórico recente</h3>
+            <button onClick={() => goTo("feedbacks")} style={{ background: "none", border: "none", color: NAVY, fontSize: "12.5px", cursor: "pointer", display: "flex", alignItems: "center", gap: "2px" }}>
+              Ver tudo <ChevronRight size={14} />
+            </button>
+          </div>
+          {meusFeedbacks.length === 0 ? (
+            <p style={{ color: NAVY_SOFT, fontSize: "13.5px" }}>Nenhum feedback registrado ainda.</p>
+          ) : (
+            meusFeedbacks
+              .sort((a, b) => b.criadoEm - a.criadoEm)
+              .slice(0, 4)
+              .map((f) => {
+                const tipo = FEEDBACK_TIPOS.find((t) => t.id === f.tipo);
+                return (
+                  <div key={f.id} style={{ padding: "10px 0", borderBottom: `1px solid ${LINE}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                      <Badge color={tipo.cor}>{tipo.label}</Badge>
+                      <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "11.5px", color: NAVY_SOFT }}>{fmtData(f.data)}</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: "13.5px", color: INK, lineHeight: 1.4 }}>
+                      {f.texto.length > 110 ? f.texto.slice(0, 110) + "…" : f.texto}
+                    </p>
+                  </div>
+                );
+              })
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/*  Colaboradores (gestor)                                                 */
+/* ---------------------------------------------------------------------- */
+function ColaboradoresPage({ user, users, discResults }) {
+  const equipe = users.filter((u) => u.gestorId === user.id);
+  return (
+    <div>
+      <h2 style={{ fontFamily: "Fraunces, serif", fontSize: "26px", fontWeight: 600, margin: "0 0 4px 0" }}>Colaboradores</h2>
+      <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 22px 0" }}>Sua equipe e o perfil comportamental de cada pessoa.</p>
+      {equipe.length === 0 ? (
+        <Card style={{ padding: "28px", textAlign: "center", color: NAVY_SOFT }}>
+          Ainda não há colaboradores vinculados a você. Peça para eles se cadastrarem escolhendo você como gestor.
+        </Card>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "14px" }}>
+          {equipe.map((c) => {
+            const res = discResults[c.id];
+            return (
+              <Card key={c.id} style={{ padding: "18px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+                  <UserCircle2 size={30} color={NAVY_SOFT} />
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: "15px" }}>{c.name}</div>
+                    <div style={{ fontSize: "12px", color: NAVY_SOFT }}>@{c.username}</div>
+                  </div>
+                </div>
+                {res ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <MiniCompass scores={res.resultado} />
+                    <div>
+                      <Badge color={DISC_INFO[res.dominante].cor}>{res.dominante} · {DISC_INFO[res.dominante].nome}</Badge>
+                      <p style={{ fontSize: "12px", color: NAVY_SOFT, margin: "8px 0 0 0", lineHeight: 1.4 }}>{DISC_INFO[res.dominante].desc}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: "12.5px", color: "#B23A2E", margin: 0 }}>Ainda não fez o teste DISC.</p>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/*  Feedbacks                                                              */
+/* ---------------------------------------------------------------------- */
+function FeedbacksPage({ user, users, feedbacks, onCreate }) {
+  const [showForm, setShowForm] = useState(false);
+  const [destinatarioId, setDestinatarioId] = useState("");
+  const [tipo, setTipo] = useState(FEEDBACK_TIPOS[0].id);
+  const [texto, setTexto] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState("todos");
+
+  const destinatarios =
+    user.role === "gestor" ? users.filter((u) => u.gestorId === user.id) : users.filter((u) => u.id === user.gestorId);
+
+  const minhas = feedbacks
+    .filter((f) => f.autorId === user.id || f.destinatarioId === user.id)
+    .filter((f) => filtroTipo === "todos" || f.tipo === filtroTipo)
+    .sort((a, b) => b.criadoEm - a.criadoEm);
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!destinatarioId || !texto.trim()) return;
+    const dest = users.find((u) => u.id === destinatarioId);
+    onCreate({
+      id: uid(),
+      autorId: user.id,
+      autorNome: user.name,
+      destinatarioId,
+      destinatarioNome: dest.name,
+      tipo,
+      texto: texto.trim(),
+      data: new Date().toISOString().slice(0, 10),
+      criadoEm: Date.now(),
+    });
+    setTexto("");
+    setDestinatarioId("");
+    setShowForm(false);
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "18px", flexWrap: "wrap", gap: "10px" }}>
+        <div>
+          <h2 style={{ fontFamily: "Fraunces, serif", fontSize: "26px", fontWeight: 600, margin: "0 0 4px 0" }}>Feedbacks</h2>
+          <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: 0 }}>Histórico completo de feedbacks trocados.</p>
+        </div>
+        {destinatarios.length > 0 && (
+          <Button onClick={() => setShowForm((s) => !s)}>
+            {showForm ? <X size={16} /> : <Plus size={16} />} {showForm ? "Cancelar" : "Novo feedback"}
+          </Button>
+        )}
+      </div>
+
+      {showForm && (
+        <Card style={{ padding: "20px", marginBottom: "22px" }}>
+          <form onSubmit={submit}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }} className="form-grid">
+              <Field label="Para">
+                <select style={inputStyle} value={destinatarioId} onChange={(e) => setDestinatarioId(e.target.value)} required>
+                  <option value="">Selecione…</option>
+                  {destinatarios.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Tipo">
+                <select style={inputStyle} value={tipo} onChange={(e) => setTipo(e.target.value)}>
+                  {FEEDBACK_TIPOS.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <Field label="Mensagem">
+              <textarea
+                style={{ ...inputStyle, minHeight: "100px", resize: "vertical", fontFamily: "IBM Plex Sans, sans-serif" }}
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+                placeholder="Descreva o contexto, o comportamento observado e o impacto…"
+                required
+              />
+            </Field>
+            <Button type="submit">
+              <Send size={15} /> Enviar feedback
+            </Button>
+          </form>
+        </Card>
+      )}
+
+      <div style={{ display: "flex", gap: "8px", marginBottom: "14px", flexWrap: "wrap" }}>
+        <button
+          onClick={() => setFiltroTipo("todos")}
+          style={{
+            border: `1px solid ${filtroTipo === "todos" ? NAVY : LINE}`,
+            background: filtroTipo === "todos" ? NAVY : "#fff",
+            color: filtroTipo === "todos" ? "#fff" : INK,
+            fontSize: "12px",
+            fontWeight: 600,
+            padding: "6px 12px",
+            borderRadius: "3px",
+            cursor: "pointer",
+          }}
+        >
+          Todos
+        </button>
+        {FEEDBACK_TIPOS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setFiltroTipo(t.id)}
+            style={{
+              border: `1px solid ${filtroTipo === t.id ? t.cor : LINE}`,
+              background: filtroTipo === t.id ? t.cor : "#fff",
+              color: filtroTipo === t.id ? "#fff" : INK,
+              fontSize: "12px",
+              fontWeight: 600,
+              padding: "6px 12px",
+              borderRadius: "3px",
+              cursor: "pointer",
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {minhas.length === 0 ? (
+        <Card style={{ padding: "28px", textAlign: "center", color: NAVY_SOFT }}>Nenhum feedback por aqui ainda.</Card>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {minhas.map((f) => {
+            const t = FEEDBACK_TIPOS.find((x) => x.id === f.tipo);
+            const recebido = f.destinatarioId === user.id;
+            return (
+              <Card key={f.id} style={{ padding: "16px 18px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <Badge color={t.cor}>{t.label}</Badge>
+                    <span style={{ fontSize: "12.5px", color: NAVY_SOFT }}>
+                      {recebido ? `de ${f.autorNome}` : `para ${f.destinatarioNome}`}
+                    </span>
+                  </div>
+                  <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "12px", color: NAVY_SOFT }}>{fmtData(f.data)}</span>
+                </div>
+                <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.5 }}>{f.texto}</p>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/*  Agenda                                                                 */
+/* ---------------------------------------------------------------------- */
+function AgendaPage({ user, users, agenda, onCreate, onUpdateStatus }) {
+  const [showForm, setShowForm] = useState(false);
+  const [colaboradorId, setColaboradorId] = useState("");
+  const [titulo, setTitulo] = useState("");
+  const [data, setData] = useState("");
+  const [hora, setHora] = useState("");
+  const [notas, setNotas] = useState("");
+
+  const equipe = users.filter((u) => u.gestorId === user.id);
+  const minhaAgenda = agenda
+    .filter((a) => (user.role === "gestor" ? a.gestorId === user.id : a.colaboradorId === user.id))
+    .sort((a, b) => (a.data + a.hora).localeCompare(b.data + b.hora));
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!colaboradorId || !titulo.trim() || !data || !hora) return;
+    onCreate({
+      id: uid(),
+      gestorId: user.id,
+      colaboradorId,
+      titulo: titulo.trim(),
+      data,
+      hora,
+      notas: notas.trim(),
+      status: "Agendado",
+    });
+    setTitulo("");
+    setData("");
+    setHora("");
+    setNotas("");
+    setColaboradorId("");
+    setShowForm(false);
+  };
+
+  const statusColor = { Agendado: "#C8952B", Realizado: "#3F7A5E", Cancelado: "#9AA192" };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "18px", flexWrap: "wrap", gap: "10px" }}>
+        <div>
+          <h2 style={{ fontFamily: "Fraunces, serif", fontSize: "26px", fontWeight: 600, margin: "0 0 4px 0" }}>Agenda de feedback</h2>
+          <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: 0 }}>Conversas marcadas e realizadas.</p>
+        </div>
+        {user.role === "gestor" && equipe.length > 0 && (
+          <Button onClick={() => setShowForm((s) => !s)}>
+            {showForm ? <X size={16} /> : <Plus size={16} />} {showForm ? "Cancelar" : "Agendar conversa"}
+          </Button>
+        )}
+      </div>
+
+      {showForm && (
+        <Card style={{ padding: "20px", marginBottom: "22px" }}>
+          <form onSubmit={submit}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }} className="form-grid">
+              <Field label="Colaborador">
+                <select style={inputStyle} value={colaboradorId} onChange={(e) => setColaboradorId(e.target.value)} required>
+                  <option value="">Selecione…</option>
+                  {equipe.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Título">
+                <input style={inputStyle} value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Feedback trimestral" required />
+              </Field>
+              <Field label="Data">
+                <input type="date" style={inputStyle} value={data} onChange={(e) => setData(e.target.value)} required />
+              </Field>
+              <Field label="Hora">
+                <input type="time" style={inputStyle} value={hora} onChange={(e) => setHora(e.target.value)} required />
+              </Field>
+            </div>
+            <Field label="Notas (opcional)">
+              <textarea style={{ ...inputStyle, minHeight: "70px", fontFamily: "IBM Plex Sans, sans-serif" }} value={notas} onChange={(e) => setNotas(e.target.value)} />
+            </Field>
+            <Button type="submit">
+              <CalendarClock size={15} /> Agendar
+            </Button>
+          </form>
+        </Card>
+      )}
+
+      {minhaAgenda.length === 0 ? (
+        <Card style={{ padding: "28px", textAlign: "center", color: NAVY_SOFT }}>Nada agendado ainda.</Card>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {minhaAgenda.map((a) => {
+            const outro = user.role === "gestor" ? users.find((u) => u.id === a.colaboradorId) : users.find((u) => u.id === a.gestorId);
+            return (
+              <Card key={a.id} style={{ padding: "16px 18px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+                  <div>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "4px" }}>
+                      <span style={{ fontWeight: 600, fontSize: "15px" }}>{a.titulo}</span>
+                      <Badge color={statusColor[a.status]}>{a.status}</Badge>
+                    </div>
+                    <div style={{ fontSize: "12.5px", color: NAVY_SOFT }}>com {outro?.name || "—"}</div>
+                    {a.notas && <p style={{ fontSize: "13px", margin: "6px 0 0 0" }}>{a.notas}</p>}
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "13px", color: NAVY_SOFT }}>
+                      {fmtData(a.data)} · {a.hora}
+                    </div>
+                    {user.role === "gestor" && a.status === "Agendado" && (
+                      <div style={{ display: "flex", gap: "6px", marginTop: "8px", justifyContent: "flex-end" }}>
+                        <Button variant="ghost" style={{ padding: "5px 10px", fontSize: "12px" }} onClick={() => onUpdateStatus(a.id, "Realizado")}>
+                          <Check size={13} /> Realizado
+                        </Button>
+                        <Button variant="danger" style={{ padding: "5px 10px", fontSize: "12px" }} onClick={() => onUpdateStatus(a.id, "Cancelado")}>
+                          <X size={13} /> Cancelar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/*  DISC test                                                              */
+/* ---------------------------------------------------------------------- */
+function DiscPage({ user, discResult, onSave }) {
+  const [answers, setAnswers] = useState(Array(DISC_BLOCKS.length).fill(null).map(() => ({ mais: null, menos: null })));
+  const [step, setStep] = useState(0);
+  const [testing, setTesting] = useState(!discResult);
+
+  const setPick = (kind, letra) => {
+    setAnswers((prev) => {
+      const next = [...prev];
+      const other = kind === "mais" ? "menos" : "mais";
+      const cur = { ...next[step] };
+      cur[kind] = letra;
+      if (cur[other] === letra) cur[other] = null;
+      next[step] = cur;
+      return next;
+    });
+  };
+
+  const podeAvancar = answers[step].mais && answers[step].menos;
+  const finished = step === DISC_BLOCKS.length - 1 && podeAvancar;
+
+  const finalizar = () => {
+    const tally = { D: 0, I: 0, S: 0, C: 0 };
+    answers.forEach((a) => {
+      if (a.mais) tally[a.mais] += 1;
+      if (a.menos) tally[a.menos] -= 1;
+    });
+    const resultado = {};
+    Object.keys(tally).forEach((k) => {
+      resultado[k] = Math.round(((tally[k] + 12) / 24) * 100);
+    });
+    const dominante = Object.entries(resultado).sort((a, b) => b[1] - a[1])[0][0];
+    onSave({ resultado, dominante, data: new Date().toISOString().slice(0, 10) });
+    setTesting(false);
+  };
+
+  if (!testing && discResult) {
+    return (
+      <div>
+        <h2 style={{ fontFamily: "Fraunces, serif", fontSize: "26px", fontWeight: 600, margin: "0 0 4px 0" }}>Seu perfil DISC</h2>
+        <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 22px 0" }}>Concluído em {fmtData(discResult.data)}.</p>
+        <Card style={{ padding: "26px" }}>
+          <div style={{ display: "flex", gap: "28px", flexWrap: "wrap", alignItems: "center" }}>
+            <Compass scores={discResult.resultado} size={220} />
+            <div style={{ flex: 1, minWidth: "220px" }}>
+              <Badge color={DISC_INFO[discResult.dominante].cor}>
+                Perfil dominante: {discResult.dominante} · {DISC_INFO[discResult.dominante].nome}
+              </Badge>
+              <p style={{ fontSize: "14px", lineHeight: 1.6, margin: "12px 0 20px 0" }}>{DISC_INFO[discResult.dominante].desc}</p>
+              {Object.entries(discResult.resultado).map(([k, v]) => (
+                <div key={k} style={{ marginBottom: "10px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", marginBottom: "3px" }}>
+                    <span style={{ fontWeight: 600 }}>{k} · {DISC_INFO[k].nome}</span>
+                    <span style={{ fontFamily: "IBM Plex Mono, monospace" }}>{v}%</span>
+                  </div>
+                  <div style={{ background: LINE, height: "6px", borderRadius: "3px" }}>
+                    <div style={{ width: `${v}%`, background: DISC_INFO[k].cor, height: "6px", borderRadius: "3px" }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            style={{ marginTop: "18px" }}
+            onClick={() => {
+              setAnswers(Array(DISC_BLOCKS.length).fill(null).map(() => ({ mais: null, menos: null })));
+              setStep(0);
+              setTesting(true);
+            }}
+          >
+            Refazer teste
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  const block = DISC_BLOCKS[step];
+  return (
+    <div>
+      <h2 style={{ fontFamily: "Fraunces, serif", fontSize: "26px", fontWeight: 600, margin: "0 0 4px 0" }}>Teste DISC</h2>
+      <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 22px 0" }}>
+        Para cada grupo, marque a palavra que <b>mais</b> e a que <b>menos</b> combina com você. Bloco {step + 1} de {DISC_BLOCKS.length}.
+      </p>
+      <Card style={{ padding: "24px", maxWidth: "560px" }}>
+        <div style={{ background: LINE, height: "5px", borderRadius: "3px", marginBottom: "22px" }}>
+          <div style={{ width: `${((step) / DISC_BLOCKS.length) * 100}%`, background: NAVY, height: "5px", borderRadius: "3px", transition: "width .2s" }} />
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "11px", textTransform: "uppercase", color: NAVY_SOFT }}>
+              <td></td>
+              <td style={{ textAlign: "center", padding: "4px" }}>Mais</td>
+              <td style={{ textAlign: "center", padding: "4px" }}>Menos</td>
+            </tr>
+          </thead>
+          <tbody>
+            {["D", "I", "S", "C"].map((letra) => (
+              <tr key={letra} style={{ borderTop: `1px solid ${LINE}` }}>
+                <td style={{ padding: "10px 6px", fontSize: "14.5px" }}>{block[letra]}</td>
+                <td style={{ textAlign: "center" }}>
+                  <input
+                    type="radio"
+                    name={`mais-${step}`}
+                    checked={answers[step].mais === letra}
+                    onChange={() => setPick("mais", letra)}
+                    style={{ accentColor: DISC_INFO[letra].cor, width: "17px", height: "17px", cursor: "pointer" }}
+                  />
+                </td>
+                <td style={{ textAlign: "center" }}>
+                  <input
+                    type="radio"
+                    name={`menos-${step}`}
+                    checked={answers[step].menos === letra}
+                    onChange={() => setPick("menos", letra)}
+                    style={{ accentColor: DISC_INFO[letra].cor, width: "17px", height: "17px", cursor: "pointer" }}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "22px" }}>
+          <Button variant="ghost" disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>
+            Voltar
+          </Button>
+          {finished ? (
+            <Button onClick={finalizar} disabled={!podeAvancar}>
+              Ver resultado
+            </Button>
+          ) : (
+            <Button disabled={!podeAvancar} onClick={() => setStep((s) => Math.min(DISC_BLOCKS.length - 1, s + 1))}>
+              Próximo
+            </Button>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/*  App shell                                                              */
+/* ---------------------------------------------------------------------- */
+export default function App() {
+  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState([]);
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [agenda, setAgenda] = useState([]);
+  const [discResults, setDiscResults] = useState({});
+  const [currentUser, setCurrentUser] = useState(null);
+  const [page, setPage] = useState("dashboard");
+
+  // Assina as coleções do Firestore em tempo real: qualquer alteração feita
+  // por qualquer pessoa (gestor ou colaborador) aparece na hora para todos.
+  useEffect(() => {
+    const unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
+      setUsers(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    });
+    const unsubFeedbacks = onSnapshot(collection(db, "feedbacks"), (snap) => {
+      setFeedbacks(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+    const unsubAgenda = onSnapshot(collection(db, "agenda"), (snap) => {
+      setAgenda(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+    const unsubDisc = onSnapshot(collection(db, "discResults"), (snap) => {
+      const map = {};
+      snap.docs.forEach((d) => {
+        map[d.id] = d.data();
+      });
+      setDiscResults(map);
+    });
+    return () => {
+      unsubUsers();
+      unsubFeedbacks();
+      unsubAgenda();
+      unsubDisc();
+    };
+  }, []);
+
+  const handleRegister = async (novo) => {
+    const { id: _drop, ...data } = novo; // o id de verdade vem do Firestore
+    const docRef = await addDoc(collection(db, "users"), data);
+    setCurrentUser({ id: docRef.id, ...data });
+  };
+
+  const handleLogin = (u) => {
+    setCurrentUser(u);
+    setPage("dashboard");
+  };
+
+  const handleCreateFeedback = async (f) => {
+    const { id: _drop, ...data } = f;
+    await addDoc(collection(db, "feedbacks"), data);
+  };
+
+  const handleCreateAgenda = async (a) => {
+    const { id: _drop, ...data } = a;
+    await addDoc(collection(db, "agenda"), data);
+  };
+
+  const handleUpdateAgendaStatus = async (id, status) => {
+    await updateDoc(doc(db, "agenda", id), { status });
+  };
+
+  const handleSaveDisc = async (result) => {
+    await setDoc(doc(db, "discResults", currentUser.id), result);
+  };
+
+  const navItems = useMemo(() => {
+    const base = [
+      { id: "dashboard", label: "Painel", icon: LayoutDashboard },
+      { id: "feedbacks", label: "Feedbacks", icon: MessageSquareText },
+      { id: "agenda", label: "Agenda", icon: CalendarClock },
+    ];
+    if (currentUser?.role === "gestor") base.splice(1, 0, { id: "colaboradores", label: "Colaboradores", icon: Users });
+    if (currentUser?.role === "colaborador") base.push({ id: "disc", label: "Teste DISC", icon: CompassIcon });
+    return base;
+  }, [currentUser]);
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: PAPER, fontFamily: "IBM Plex Sans, sans-serif", color: NAVY_SOFT }}>
+        Carregando…
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <AuthScreen users={users} onLogin={handleLogin} onRegister={handleRegister} />;
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: PAPER, fontFamily: "IBM Plex Sans, sans-serif", color: INK }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+        * { box-sizing: border-box; }
+        @media (max-width: 780px) {
+          .app-shell { flex-direction: column !important; }
+          .app-sidebar { width: 100% !important; flex-direction: row !important; overflow-x: auto; padding: 10px !important; }
+          .app-sidebar .nav-list { flex-direction: row !important; }
+          .dash-grid { grid-template-columns: 1fr !important; }
+          .form-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+      <div className="app-shell" style={{ display: "flex", minHeight: "100vh" }}>
+        <div className="app-sidebar" style={{ width: "230px", borderRight: `1px solid ${LINE}`, padding: "22px 16px", display: "flex", flexDirection: "column", background: PAPER_RAISED }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "26px", paddingLeft: "6px" }}>
+            <CompassIcon size={20} color={NAVY} />
+            <span style={{ fontFamily: "Fraunces, serif", fontWeight: 600, fontSize: "16px" }}>Bússola</span>
+          </div>
+          <div className="nav-list" style={{ display: "flex", flexDirection: "column", gap: "3px", flex: 1 }}>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const active = page === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setPage(item.id)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "10px 12px",
+                    border: "none",
+                    borderRadius: "3px",
+                    background: active ? NAVY : "transparent",
+                    color: active ? "#fff" : INK,
+                    fontFamily: "IBM Plex Sans, sans-serif",
+                    fontSize: "13.5px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    textAlign: "left",
+                  }}
+                >
+                  <Icon size={16} /> {item.label}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ borderTop: `1px solid ${LINE}`, paddingTop: "14px", marginTop: "14px" }}>
+            <div style={{ fontSize: "13px", fontWeight: 600 }}>{currentUser.name}</div>
+            <div style={{ fontSize: "11.5px", color: NAVY_SOFT, marginBottom: "10px", textTransform: "capitalize" }}>{currentUser.role}</div>
+            <button
+              onClick={() => setCurrentUser(null)}
+              style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#B23A2E", fontSize: "12.5px", fontWeight: 600, cursor: "pointer", padding: 0 }}
+            >
+              <LogOut size={14} /> Sair
+            </button>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, padding: "32px", maxWidth: "980px" }}>
+          {page === "dashboard" && (
+            <Dashboard user={currentUser} users={users} feedbacks={feedbacks} agenda={agenda} discResults={discResults} goTo={setPage} />
+          )}
+          {page === "colaboradores" && currentUser.role === "gestor" && (
+            <ColaboradoresPage user={currentUser} users={users} discResults={discResults} />
+          )}
+          {page === "feedbacks" && (
+            <FeedbacksPage user={currentUser} users={users} feedbacks={feedbacks} onCreate={handleCreateFeedback} />
+          )}
+          {page === "agenda" && (
+            <AgendaPage user={currentUser} users={users} agenda={agenda} onCreate={handleCreateAgenda} onUpdateStatus={handleUpdateAgendaStatus} />
+          )}
+          {page === "disc" && currentUser.role === "colaborador" && (
+            <DiscPage user={currentUser} discResult={discResults[currentUser.id]} onSave={handleSaveDisc} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
