@@ -15,5 +15,10 @@ const firebaseConfig = {
   appId: "SEU_APP_ID",
 };
 
+export const isFirebaseConfigured =
+  firebaseConfig.apiKey &&
+  firebaseConfig.apiKey !== "SUA_API_KEY" &&
+  firebaseConfig.apiKey.trim() !== "";
+
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);

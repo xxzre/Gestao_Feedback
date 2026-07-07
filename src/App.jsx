@@ -23,7 +23,7 @@ import {
   updateDoc,
   onSnapshot,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { db, isFirebaseConfigured } from "./firebase";
 
 /* ---------------------------------------------------------------------- */
 /*  Tokens                                                                 */
@@ -1051,64 +1051,116 @@ export default function App() {
   const [feedbacks, setFeedbacks] = useState([]);
   const [agenda, setAgenda] = useState([]);
   const [discResults, setDiscResults] = useState({});
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem("disc_currentUser");
+    return saved ? JSON.parse(saved) : null;
+  });
   const [page, setPage] = useState("dashboard");
 
-  // Assina as coleções do Firestore em tempo real: qualquer alteração feita
+  // Assina as coleções do Firestore em tempo real se configurado: qualquer alteração feita
   // por qualquer pessoa (gestor ou colaborador) aparece na hora para todos.
   useEffect(() => {
-    const unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
-      setUsers(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setLoading(false);
-    });
-    const unsubFeedbacks = onSnapshot(collection(db, "feedbacks"), (snap) => {
-      setFeedbacks(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
-    const unsubAgenda = onSnapshot(collection(db, "agenda"), (snap) => {
-      setAgenda(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
-    const unsubDisc = onSnapshot(collection(db, "discResults"), (snap) => {
-      const map = {};
-      snap.docs.forEach((d) => {
-        map[d.id] = d.data();
+    if (isFirebaseConfigured) {
+      const unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
+        setUsers(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setLoading(false);
       });
-      setDiscResults(map);
-    });
-    return () => {
-      unsubUsers();
-      unsubFeedbacks();
-      unsubAgenda();
-      unsubDisc();
-    };
+      const unsubFeedbacks = onSnapshot(collection(db, "feedbacks"), (snap) => {
+        setFeedbacks(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      });
+      const unsubAgenda = onSnapshot(collection(db, "agenda"), (snap) => {
+        setAgenda(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      });
+      const unsubDisc = onSnapshot(collection(db, "discResults"), (snap) => {
+        const map = {};
+        snap.docs.forEach((d) => {
+          map[d.id] = d.data();
+        });
+        setDiscResults(map);
+      });
+      return () => {
+        unsubUsers();
+        unsubFeedbacks();
+        unsubAgenda();
+        unsubDisc();
+      };
+    } else {
+      const localUsers = JSON.parse(localStorage.getItem("disc_users") || "[]");
+      const localFeedbacks = JSON.parse(localStorage.getItem("disc_feedbacks") || "[]");
+      const localAgenda = JSON.parse(localStorage.getItem("disc_agenda") || "[]");
+      const localDisc = JSON.parse(localStorage.getItem("disc_results") || "{}");
+      setUsers(localUsers);
+      setFeedbacks(localFeedbacks);
+      setAgenda(localAgenda);
+      setDiscResults(localDisc);
+      setLoading(false);
+    }
   }, []);
 
   const handleRegister = async (novo) => {
-    const { id: _drop, ...data } = novo; // o id de verdade vem do Firestore
-    const docRef = await addDoc(collection(db, "users"), data);
-    setCurrentUser({ id: docRef.id, ...data });
+    if (isFirebaseConfigured) {
+      const { id: _drop, ...data } = novo; // o id de verdade vem do Firestore
+      const docRef = await addDoc(collection(db, "users"), data);
+      const loggedUser = { id: docRef.id, ...data };
+      setCurrentUser(loggedUser);
+      localStorage.setItem("disc_currentUser", JSON.stringify(loggedUser));
+    } else {
+      const updatedUsers = [...users, novo];
+      setUsers(updatedUsers);
+      localStorage.setItem("disc_users", JSON.stringify(updatedUsers));
+      setCurrentUser(novo);
+      localStorage.setItem("disc_currentUser", JSON.stringify(novo));
+    }
   };
 
   const handleLogin = (u) => {
     setCurrentUser(u);
+    localStorage.setItem("disc_currentUser", JSON.stringify(u));
     setPage("dashboard");
   };
 
   const handleCreateFeedback = async (f) => {
-    const { id: _drop, ...data } = f;
-    await addDoc(collection(db, "feedbacks"), data);
+    if (isFirebaseConfigured) {
+      const { id: _drop, ...data } = f;
+      await addDoc(collection(db, "feedbacks"), data);
+    } else {
+      const updatedFeedbacks = [...feedbacks, f];
+      setFeedbacks(updatedFeedbacks);
+      localStorage.setItem("disc_feedbacks", JSON.stringify(updatedFeedbacks));
+    }
   };
 
   const handleCreateAgenda = async (a) => {
-    const { id: _drop, ...data } = a;
-    await addDoc(collection(db, "agenda"), data);
+    if (isFirebaseConfigured) {
+      const { id: _drop, ...data } = a;
+      await addDoc(collection(db, "agenda"), data);
+    } else {
+      const updatedAgenda = [...agenda, a];
+      setAgenda(updatedAgenda);
+      localStorage.setItem("disc_agenda", JSON.stringify(updatedAgenda));
+    }
   };
 
   const handleUpdateAgendaStatus = async (id, status) => {
-    await updateDoc(doc(db, "agenda", id), { status });
+    if (isFirebaseConfigured) {
+      await updateDoc(doc(db, "agenda", id), { status });
+    } else {
+      const updatedAgenda = agenda.map((item) =>
+        item.id === id ? { ...item, status } : item
+      );
+      setAgenda(updatedAgenda);
+      localStorage.setItem("disc_agenda", JSON.stringify(updatedAgenda));
+    }
   };
 
   const handleSaveDisc = async (result) => {
-    await setDoc(doc(db, "discResults", currentUser.id), result);
+    if (isFirebaseConfigured) {
+      await setDoc(doc(db, "discResults", currentUser.id), result);
+    } else {
+      const updatedDisc = { ...discResults, [currentUser.id]: result };
+      setDiscResults(updatedDisc);
+      localStorage.setItem("disc_results", JSON.stringify(updatedDisc));
+    }
   };
 
   const navItems = useMemo(() => {
@@ -1153,6 +1205,24 @@ export default function App() {
             <CompassIcon size={20} color={NAVY} />
             <span style={{ fontFamily: "Fraunces, serif", fontWeight: 600, fontSize: "16px" }}>Bússola</span>
           </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "20px", paddingLeft: "6px" }}>
+            <span style={{
+              width: "7px",
+              height: "7px",
+              borderRadius: "50%",
+              backgroundColor: isFirebaseConfigured ? "#3F7A5E" : "#C8952B",
+              display: "inline-block"
+            }} />
+            <span style={{
+              fontSize: "10.5px",
+              fontFamily: "IBM Plex Mono, monospace",
+              color: NAVY_SOFT,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em"
+            }}>
+              {isFirebaseConfigured ? "Nuvem (Firebase)" : "Modo Local (Offline)"}
+            </span>
+          </div>
           <div className="nav-list" style={{ display: "flex", flexDirection: "column", gap: "3px", flex: 1 }}>
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -1187,7 +1257,10 @@ export default function App() {
             <div style={{ fontSize: "13px", fontWeight: 600 }}>{currentUser.name}</div>
             <div style={{ fontSize: "11.5px", color: NAVY_SOFT, marginBottom: "10px", textTransform: "capitalize" }}>{currentUser.role}</div>
             <button
-              onClick={() => setCurrentUser(null)}
+              onClick={() => {
+                setCurrentUser(null);
+                localStorage.removeItem("disc_currentUser");
+              }}
               style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#B23A2E", fontSize: "12.5px", fontWeight: 600, cursor: "pointer", padding: 0 }}
             >
               <LogOut size={14} /> Sair
