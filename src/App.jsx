@@ -609,17 +609,173 @@ function ColaboradoresPage({ user, users, discResults }) {
                 )}
               </Card>
             );
-          })}
-        </div>
-      )}
+ /* ---------------------------------------------------------------------- */
+/*  Guia DISC (gestor) - Sub-abas                                          */
+/* ---------------------------------------------------------------------- */
+function PerguntasSubTab() {
+  const perguntas = [
+    {
+      num: "1",
+      emoji: "🌟",
+      pergunta: "O que você acha que está fazendo muito bem atualmente?",
+      explicacao: "Valoriza os pontos fortes e aumenta a confiança."
+    },
+    {
+      num: "2",
+      emoji: "🔍",
+      pergunta: "Em quais pontos você acredita que pode melhorar?",
+      explicacao: "Estimula autoconhecimento antes mesmo da sua percepção."
+    },
+    {
+      num: "3",
+      emoji: "📊",
+      pergunta: "O que está te impedindo hoje de performar melhor?",
+      explicacao: "Identifica barreiras reais (processos, ferramentas, ambiente, etc.)."
+    },
+    {
+      num: "4",
+      emoji: "🎯",
+      pergunta: "Quais são seus objetivos de desenvolvimento no curto prazo?",
+      explicacao: "Conecta o feedback com crescimento e plano de ação."
+    },
+    {
+      num: "5",
+      emoji: "🤝",
+      pergunta: "Como posso te apoiar melhor no seu desenvolvimento?",
+      explicacao: "Mostra liderança, parceria e abre espaço para ajustes na gestão."
+    }
+  ];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+      {perguntas.map((p) => (
+        <Card key={p.num} style={{ padding: "18px" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+            <span style={{ fontSize: "24px" }}>{p.emoji}</span>
+            <div>
+              <h4 style={{ fontFamily: "Fraunces, serif", fontSize: "16px", margin: "0 0 6px 0", color: NAVY }}>
+                {p.num}. {p.pergunta}
+              </h4>
+              <p style={{ margin: 0, fontSize: "13.5px", color: INK, display: "flex", alignItems: "center", gap: "6px" }}>
+                <span style={{ color: "#3F7A5E", fontWeight: "bold" }}>👉</span> {p.explicacao}
+              </p>
+            </div>
+          </div>
+        </Card>
+      ))}
     </div>
   );
 }
 
-/* ---------------------------------------------------------------------- */
-/*  Guia DISC (gestor)                                                     */
-/* ---------------------------------------------------------------------- */
+function DevolucaoSubTab() {
+  const [copiedIndex, setCopiedIndex] = useState(null);
+
+  const templates = [
+    {
+      titulo: "Modelo 1: Registro de Feedback – Colaborador (Autoavaliação)",
+      texto: `Registro de Feedback – Colaborador
+
+1. Pontos Fortes (Autoavaliação):
+O colaborador destaca como principais pontos fortes: [resumo objetivo das respostas].
+Percepção da liderança: Os pontos mencionados são consistentes com o desempenho apresentado, com destaque para [inserir exemplo prático ou comportamento observado].
+
+2. Pontos de Desenvolvimento (Autoavaliação):
+O colaborador identifica oportunidades de melhoria em: [resumo].
+Percepção da liderança: Corroboro com os pontos levantados e acrescento a importância de desenvolver [se aplicável], visando aprimorar a performance e os resultados.
+
+3. Desafios e Barreiras:
+Foram apontados como principais desafios: [listar de forma clara].
+Análise: Avaliar ações para mitigar os impactos, considerando ajustes de rotina, alinhamentos e suporte necessário.
+
+4. Objetivos de Desenvolvimento:
+O colaborador demonstra interesse em evoluir em: [resumo dos objetivos].
+Direcionamento: Será estruturado um plano de desenvolvimento com foco em [competências/metas], com acompanhamento periódico para evolução contínua.
+
+5. Suporte Necessário da Liderança:
+O colaborador sinaliza necessidade de apoio em: [resumo].
+Acordos estabelecidos: A liderança irá apoiar por meio de [ex: alinhamentos frequentes, direcionamentos, acompanhamento e/ou capacitação].
+
+6. Encerramento:
+O colaborador demonstra [ex: engajamento, responsabilidade, abertura ao aprendizado].
+Reforço a importância da continuidade no desenvolvimento e acompanhamento das ações acordadas, visando evolução consistente e alinhamento aos objetivos da área.`
+    },
+    {
+      titulo: "Modelo 2: Registro de Feedback – Colaborador (Percepção Geral)",
+      texto: `Registro de Feedback – Colaborador
+
+1. Pontos Fortes (Percepção do colaborador):
+O colaborador destaca como principais pontos fortes: [resumir o que ele disse].
+Validação da liderança: Reforço que esses pontos são percebidos no dia a dia, especialmente em [exemplo prático ou situação].
+
+2. Pontos de Melhoria (Percepção do colaborador):
+O colaborador reconhece a necessidade de desenvolvimento em: [resumir].
+Complemento da liderança: Além disso, observo oportunidades de evolução em [se houver], principalmente em [impacto no trabalho].
+
+3. Principais Barreiras Identificadas:
+Foram mencionados como desafios: [listar obstáculos citados].
+Ação proposta: Avaliar junto à liderança formas de minimizar esses impactos, como [ex: ajustes de processo, apoio técnico, treinamento].
+
+4. Objetivos de Desenvolvimento:
+O colaborador demonstrou interesse em desenvolver: [resumir objetivos].
+Direcionamento: Alinhar um plano de ação com foco em [competência ou meta], com acompanhamento periódico.
+
+5. Apoio da Liderança:
+O colaborador sinalizou que precisa de suporte em: [resumir].
+Compromisso da liderança: Ficou acordado que será oferecido apoio por meio de [ex: feedbacks mais frequentes, acompanhamento, capacitação, alinhamentos].
+
+6. Considerações Finais:
+O colaborador demonstra [ex: comprometimento, abertura ao desenvolvimento, engajamento].
+Seguiremos acompanhando sua evolução com foco em melhoria contínua e alcance dos resultados esperados.`
+    }
+  ];
+
+  const handleCopy = (text, idx) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(idx);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      {templates.map((t, idx) => (
+        <Card key={idx} style={{ padding: "20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", borderBottom: `1px solid ${LINE}`, paddingBottom: "10px", flexWrap: "wrap", gap: "10px" }}>
+            <h4 style={{ fontFamily: "Fraunces, serif", fontSize: "16px", margin: 0, color: NAVY }}>
+              {t.titulo}
+            </h4>
+            <Button
+              onClick={() => handleCopy(t.texto, idx)}
+              variant="ghost"
+              style={{ padding: "6px 12px", fontSize: "12px" }}
+            >
+              {copiedIndex === idx ? "Copiado!" : "Copiar Modelo"}
+            </Button>
+          </div>
+          <pre style={{
+            margin: 0,
+            whiteSpace: "pre-wrap",
+            fontFamily: "IBM Plex Sans, sans-serif",
+            fontSize: "13px",
+            lineHeight: 1.6,
+            color: INK,
+            background: "#fff",
+            padding: "14px",
+            borderRadius: "4px",
+            border: `1px solid ${LINE}`,
+            maxHeight: "350px",
+            overflowY: "auto"
+          }}>
+            {t.texto}
+          </pre>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 function GuiaDiscPage() {
+  const [activeSubTab, setActiveSubTab] = useState("perfis");
+
   const perfis = [
     {
       sigla: "D",
@@ -681,80 +837,114 @@ function GuiaDiscPage() {
         Como Lidar com cada Perfil (DISC)
       </h2>
       <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 22px 0" }}>
-        Estratégias práticas para guiar, motivar e dar feedbacks para cada perfil comportamental da sua equipe.
+        Recursos para líderes: guias de perfil, perguntas chave para reuniões e modelos de devolução de feedback.
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: "16px", marginBottom: "32px" }}>
-        {perfis.map((p) => (
-          <Card key={p.sigla} style={{ padding: "20px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
-              <span style={{
-                fontFamily: "IBM Plex Mono, monospace",
-                fontSize: "20px",
-                fontWeight: "bold",
-                backgroundColor: p.cor,
-                color: "#fff",
-                width: "36px",
-                height: "36px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "4px"
-              }}>
-                {p.sigla}
-              </span>
-              <div>
-                <h3 style={{ fontFamily: "Fraunces, serif", fontSize: "18px", margin: 0 }}>{p.nome}</h3>
-                <span style={{ fontSize: "12.5px", color: NAVY_SOFT }}>Características principais</span>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: "14px" }}>
-              <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em", color: NAVY_SOFT, display: "block", marginBottom: "6px" }}>
-                Como Lidar no Dia a Dia:
-              </span>
-              <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "13px", lineHeight: 1.5 }}>
-                {p.comoLidar.map((item, idx) => (
-                  <li key={idx} style={{ marginBottom: "4px" }}>{item}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div style={{ borderTop: `1px solid ${LINE}`, paddingTop: "12px" }}>
-              <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em", color: NAVY_SOFT, display: "block", marginBottom: "4px" }}>
-                Foco do Feedback:
-              </span>
-              <p style={{ margin: 0, fontSize: "13px", lineHeight: 1.4, fontStyle: "italic" }}>
-                "{p.feedback}"
-              </p>
-            </div>
-          </Card>
+      {/* Sub-abas de Navegação */}
+      <div style={{ display: "flex", gap: "6px", marginBottom: "22px", borderBottom: `1px solid ${LINE}`, flexWrap: "wrap" }}>
+        {[
+          { id: "perfis", label: "Perfis DISC" },
+          { id: "perguntas", label: "Perguntas" },
+          { id: "devolucao", label: "Devolução" }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveSubTab(tab.id)}
+            style={{
+              background: "none",
+              border: "none",
+              padding: "10px 16px",
+              fontFamily: "IBM Plex Sans, sans-serif",
+              fontSize: "13.5px",
+              fontWeight: 600,
+              color: activeSubTab === tab.id ? NAVY : "#9AA192",
+              borderBottom: activeSubTab === tab.id ? `2px solid ${NAVY}` : "2px solid transparent",
+              cursor: "pointer",
+            }}
+          >
+            {tab.label}
+          </button>
         ))}
       </div>
 
-      <div style={{ borderTop: `2px solid ${LINE}`, paddingTop: "24px", marginTop: "24px" }}>
-        <h3 style={{ fontFamily: "Fraunces, serif", fontSize: "20px", fontWeight: 600, marginBottom: "6px" }}>
-          Guias Rápidos e Infográficos
-        </h3>
-        <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 20px 0" }}>
-          Consulte os guias abaixo para referência rápida ao preparar conversas de feedback.
-        </p>
+      {activeSubTab === "perfis" && (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: "16px", marginBottom: "32px" }}>
+            {perfis.map((p) => (
+              <Card key={p.sigla} style={{ padding: "20px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+                  <span style={{
+                    fontFamily: "IBM Plex Mono, monospace",
+                    fontSize: "20px",
+                    fontWeight: "bold",
+                    backgroundColor: p.cor,
+                    color: "#fff",
+                    width: "36px",
+                    height: "36px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "4px"
+                  }}>
+                    {p.sigla}
+                  </span>
+                  <div>
+                    <h3 style={{ fontFamily: "Fraunces, serif", fontSize: "18px", margin: 0 }}>{p.nome}</h3>
+                    <span style={{ fontSize: "12.5px", color: NAVY_SOFT }}>Características principais</span>
+                  </div>
+                </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
-          <div style={{ background: PAPER_RAISED, border: `1px solid ${LINE}`, borderRadius: "4px", padding: "12px" }}>
-            <h4 style={{ fontFamily: "Fraunces, serif", fontSize: "15px", margin: "0 0 10px 0", color: NAVY }}>Estrutura de Feedback</h4>
-            <img src={feed1} alt="Estrutura de Feedback" style={{ width: "100%", height: "auto", borderRadius: "3px", objectFit: "contain" }} />
+                <div style={{ marginBottom: "14px" }}>
+                  <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em", color: NAVY_SOFT, display: "block", marginBottom: "6px" }}>
+                    Como Lidar no Dia a Dia:
+                  </span>
+                  <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "13px", lineHeight: 1.5 }}>
+                    {p.comoLidar.map((item, idx) => (
+                      <li key={idx} style={{ marginBottom: "4px" }}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div style={{ borderTop: `1px solid ${LINE}`, paddingTop: "12px" }}>
+                  <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em", color: NAVY_SOFT, display: "block", marginBottom: "4px" }}>
+                    Foco do Feedback:
+                  </span>
+                  <p style={{ margin: 0, fontSize: "13px", lineHeight: 1.4, fontStyle: "italic" }}>
+                    "{p.feedback}"
+                  </p>
+                </div>
+              </Card>
+            ))}
           </div>
-          <div style={{ background: PAPER_RAISED, border: `1px solid ${LINE}`, borderRadius: "4px", padding: "12px" }}>
-            <h4 style={{ fontFamily: "Fraunces, serif", fontSize: "15px", margin: "0 0 10px 0", color: NAVY }}>Adaptando a Linguagem</h4>
-            <img src={feed2} alt="Adaptando a Linguagem" style={{ width: "100%", height: "auto", borderRadius: "3px", objectFit: "contain" }} />
+
+          <div style={{ borderTop: `2px solid ${LINE}`, paddingTop: "24px" }}>
+            <h3 style={{ fontFamily: "Fraunces, serif", fontSize: "20px", fontWeight: 600, marginBottom: "6px" }}>
+              Guias Rápidos e Infográficos
+            </h3>
+            <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 20px 0" }}>
+              Consulte os guias abaixo para referência rápida ao preparar conversas de feedback.
+            </p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
+              <div style={{ background: PAPER_RAISED, border: `1px solid ${LINE}`, borderRadius: "4px", padding: "12px" }}>
+                <h4 style={{ fontFamily: "Fraunces, serif", fontSize: "15px", margin: "0 0 10px 0", color: NAVY }}>Estrutura de Feedback</h4>
+                <img src={feed1} alt="Estrutura de Feedback" style={{ width: "100%", height: "auto", borderRadius: "3px", objectFit: "contain" }} />
+              </div>
+              <div style={{ background: PAPER_RAISED, border: `1px solid ${LINE}`, borderRadius: "4px", padding: "12px" }}>
+                <h4 style={{ fontFamily: "Fraunces, serif", fontSize: "15px", margin: "0 0 10px 0", color: NAVY }}>Adaptando a Linguagem</h4>
+                <img src={feed2} alt="Adaptando a Linguagem" style={{ width: "100%", height: "auto", borderRadius: "3px", objectFit: "contain" }} />
+              </div>
+              <div style={{ background: PAPER_RAISED, border: `1px solid ${LINE}`, borderRadius: "4px", padding: "12px" }}>
+                <h4 style={{ fontFamily: "Fraunces, serif", fontSize: "15px", margin: "0 0 10px 0", color: NAVY }}>Armadilhas Comuns</h4>
+                <img src={feed3} alt="Armadilhas Comuns" style={{ width: "100%", height: "auto", borderRadius: "3px", objectFit: "contain" }} />
+              </div>
+            </div>
           </div>
-          <div style={{ background: PAPER_RAISED, border: `1px solid ${LINE}`, borderRadius: "4px", padding: "12px" }}>
-            <h4 style={{ fontFamily: "Fraunces, serif", fontSize: "15px", margin: "0 0 10px 0", color: NAVY }}>Armadilhas Comuns</h4>
-            <img src={feed3} alt="Armadilhas Comuns" style={{ width: "100%", height: "auto", borderRadius: "3px", objectFit: "contain" }} />
-          </div>
-        </div>
-      </div>
+        </>
+      )}
+
+      {activeSubTab === "perguntas" && <PerguntasSubTab />}
+      {activeSubTab === "devolucao" && <DevolucaoSubTab />}
     </div>
   );
 }
