@@ -7,12 +7,13 @@ import { getFirestore } from "firebase/firestore";
 // 4) No menu lateral, vá em "Firestore Database" -> "Criar banco de dados"
 //    (pode escolher o modo de produção; ajustaremos as regras no README).
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  projectId: "SEU_PROJETO",
-  storageBucket: "SEU_PROJETO.appspot.com",
-  messagingSenderId: "SEU_SENDER_ID",
-  appId: "SEU_APP_ID",
+  apiKey: "AIzaSyCHBrmr39kmk48fZj3oHA1-Y52_EJMnohI",
+  authDomain: "gestao-feedback.firebaseapp.com",
+  projectId: "gestao-feedback",
+  storageBucket: "gestao-feedback.firebasestorage.app",
+  messagingSenderId: "274359550576",
+  appId: "1:274359550576:web:9d19fffec993eed7c62ab5",
+  measurementId: "G-TW2MRWYPEP"
 };
 
 export const isFirebaseConfigured =
