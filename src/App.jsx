@@ -14,7 +14,11 @@ import {
   Send,
   ShieldCheck,
   Sparkles,
+  BookOpen,
 } from "lucide-react";
+import feed1 from "./feed1.jpeg";
+import feed2 from "./feed2.jpeg";
+import feed3 from "./feed3.jpeg";
 import {
   collection,
   addDoc,
@@ -613,6 +617,149 @@ function ColaboradoresPage({ user, users, discResults }) {
 }
 
 /* ---------------------------------------------------------------------- */
+/*  Guia DISC (gestor)                                                     */
+/* ---------------------------------------------------------------------- */
+function GuiaDiscPage() {
+  const perfis = [
+    {
+      sigla: "D",
+      nome: "Dominância",
+      cor: DISC_INFO.D.cor,
+      caract: "Foco em resultados, rapidez, competitividade e pragmatismo.",
+      comoLidar: [
+        "Seja direto, objetivo e vá direto ao ponto.",
+        "Apresente soluções e resultados, não apenas problemas.",
+        "Dê autonomia para tomada de decisões sempre que possível.",
+        "Evite rodeios, microgestão ou ser excessivamente formal."
+      ],
+      feedback: "Deve ser factual, direto e focado em metas de desenvolvimento futuro."
+    },
+    {
+      sigla: "I",
+      nome: "Influência",
+      cor: DISC_INFO.I.cor,
+      caract: "Entusiasmo, otimismo, comunicação verbal e foco nas pessoas.",
+      comoLidar: [
+        "Crie uma atmosfera calorosa e amigável.",
+        "Reconheça publicamente as suas ideias e contribuições.",
+        "Ajude a estruturar metas e prazos com lembretes claros.",
+        "Evite detalhes excessivamente técnicos ou burocráticos de início."
+      ],
+      feedback: "Comece com reconhecimento pessoal sincero e ajude a focar em 1 ou 2 pontos de melhoria práticos."
+    },
+    {
+      sigla: "S",
+      nome: "Estabilidade",
+      cor: DISC_INFO.S.cor,
+      caract: "Paciência, persistência, cooperação e escuta ativa.",
+      comoLidar: [
+        "Seja gentil, demonstre empatia e interesse genuíno pela pessoa.",
+        "Dê previsibilidade e avise sobre mudanças com antecedência.",
+        "Mostre como as ações dele impactam e ajudam a equipe.",
+        "Evite pressões bruscas, impaciência ou conflitos desnecessários."
+      ],
+      feedback: "Crie um ambiente de apoio mútuo, dê tempo para processar e garanta que o relacionamento continua forte."
+    },
+    {
+      sigla: "C",
+      nome: "Conformidade",
+      cor: DISC_INFO.C.cor,
+      caract: "Precisão, foco em processos, qualidade e detalhismo técnico.",
+      comoLidar: [
+        "Forneça dados, regras claros e documentação precisa.",
+        "Respeite o tempo necessário para análise detalhada.",
+        "Seja lógico, organizado e evite abordagens puramente emocionais.",
+        "Evite ser vago ou prometer coisas sem comprovação."
+      ],
+      feedback: "Deve ser altamente analítico, fundamentado em dados e métricas, focado na melhoria do processo."
+    }
+  ];
+
+  return (
+    <div>
+      <h2 style={{ fontFamily: "Fraunces, serif", fontSize: "26px", fontWeight: 600, margin: "0 0 4px 0" }}>
+        Como Lidar com cada Perfil (DISC)
+      </h2>
+      <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 22px 0" }}>
+        Estratégias práticas para guiar, motivar e dar feedbacks para cada perfil comportamental da sua equipe.
+      </p>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: "16px", marginBottom: "32px" }}>
+        {perfis.map((p) => (
+          <Card key={p.sigla} style={{ padding: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+              <span style={{
+                fontFamily: "IBM Plex Mono, monospace",
+                fontSize: "20px",
+                fontWeight: "bold",
+                backgroundColor: p.cor,
+                color: "#fff",
+                width: "36px",
+                height: "36px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "4px"
+              }}>
+                {p.sigla}
+              </span>
+              <div>
+                <h3 style={{ fontFamily: "Fraunces, serif", fontSize: "18px", margin: 0 }}>{p.nome}</h3>
+                <span style={{ fontSize: "12.5px", color: NAVY_SOFT }}>Características principais</span>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "14px" }}>
+              <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em", color: NAVY_SOFT, display: "block", marginBottom: "6px" }}>
+                Como Lidar no Dia a Dia:
+              </span>
+              <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "13px", lineHeight: 1.5 }}>
+                {p.comoLidar.map((item, idx) => (
+                  <li key={idx} style={{ marginBottom: "4px" }}>{item}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div style={{ borderTop: `1px solid ${LINE}`, paddingTop: "12px" }}>
+              <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em", color: NAVY_SOFT, display: "block", marginBottom: "4px" }}>
+                Foco do Feedback:
+              </span>
+              <p style={{ margin: 0, fontSize: "13px", lineHeight: 1.4, fontStyle: "italic" }}>
+                "{p.feedback}"
+              </p>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <div style={{ borderTop: `2px solid ${LINE}`, paddingTop: "24px", marginTop: "24px" }}>
+        <h3 style={{ fontFamily: "Fraunces, serif", fontSize: "20px", fontWeight: 600, marginBottom: "6px" }}>
+          Guias Rápidos e Infográficos
+        </h3>
+        <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 20px 0" }}>
+          Consulte os guias abaixo para referência rápida ao preparar conversas de feedback.
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
+          <div style={{ background: PAPER_RAISED, border: `1px solid ${LINE}`, borderRadius: "4px", padding: "12px" }}>
+            <h4 style={{ fontFamily: "Fraunces, serif", fontSize: "15px", margin: "0 0 10px 0", color: NAVY }}>Estrutura de Feedback</h4>
+            <img src={feed1} alt="Estrutura de Feedback" style={{ width: "100%", height: "auto", borderRadius: "3px", objectFit: "contain" }} />
+          </div>
+          <div style={{ background: PAPER_RAISED, border: `1px solid ${LINE}`, borderRadius: "4px", padding: "12px" }}>
+            <h4 style={{ fontFamily: "Fraunces, serif", fontSize: "15px", margin: "0 0 10px 0", color: NAVY }}>Adaptando a Linguagem</h4>
+            <img src={feed2} alt="Adaptando a Linguagem" style={{ width: "100%", height: "auto", borderRadius: "3px", objectFit: "contain" }} />
+          </div>
+          <div style={{ background: PAPER_RAISED, border: `1px solid ${LINE}`, borderRadius: "4px", padding: "12px" }}>
+            <h4 style={{ fontFamily: "Fraunces, serif", fontSize: "15px", margin: "0 0 10px 0", color: NAVY }}>Armadilhas Comuns</h4>
+            <img src={feed3} alt="Armadilhas Comuns" style={{ width: "100%", height: "auto", borderRadius: "3px", objectFit: "contain" }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
 /*  Feedbacks                                                              */
 /* ---------------------------------------------------------------------- */
 function FeedbacksPage({ user, users, feedbacks, onCreate }) {
@@ -1169,7 +1316,10 @@ export default function App() {
       { id: "feedbacks", label: "Feedbacks", icon: MessageSquareText },
       { id: "agenda", label: "Agenda", icon: CalendarClock },
     ];
-    if (currentUser?.role === "gestor") base.splice(1, 0, { id: "colaboradores", label: "Colaboradores", icon: Users });
+    if (currentUser?.role === "gestor") {
+      base.splice(1, 0, { id: "colaboradores", label: "Colaboradores", icon: Users });
+      base.push({ id: "guiaDisc", label: "Como Lidar (DISC)", icon: BookOpen });
+    }
     if (currentUser?.role === "colaborador") base.push({ id: "disc", label: "Teste DISC", icon: CompassIcon });
     return base;
   }, [currentUser]);
@@ -1283,6 +1433,9 @@ export default function App() {
           )}
           {page === "disc" && currentUser.role === "colaborador" && (
             <DiscPage user={currentUser} discResult={discResults[currentUser.id]} onSave={handleSaveDisc} />
+          )}
+          {page === "guiaDisc" && currentUser.role === "gestor" && (
+            <GuiaDiscPage />
           )}
         </div>
       </div>
