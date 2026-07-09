@@ -32,12 +32,22 @@ import { db, isFirebaseConfigured } from "./firebase";
 /* ---------------------------------------------------------------------- */
 /*  Tokens                                                                 */
 /* ---------------------------------------------------------------------- */
-const INK = "#232A22";
-const PAPER = "#EEF0E9";
-const PAPER_RAISED = "#F7F8F3";
-const LINE = "#D9DBCF";
-const NAVY = "#22314A";
-const NAVY_SOFT = "#3A4A66";
+// GOL Brand Palette
+const GOL_ORANGE = "#FF6F1F";
+const GOL_ORANGE_DARK = "#D95A10";
+const GOL_ORANGE_LIGHT = "#FF8C47";
+const GOL_BLACK = "#111111";
+const GOL_DARK = "#1A1A1A";
+const GOL_SIDEBAR = "#141414";
+const GOL_SIDEBAR_HOVER = "#242424";
+
+// Semantic aliases (keeping old names for backward compat)
+const INK = "#1A1A1A";
+const PAPER = "#F5F5F5";
+const PAPER_RAISED = "#FFFFFF";
+const LINE = "#E8E8E8";
+const NAVY = GOL_ORANGE;
+const NAVY_SOFT = "#888888";
 
 const DISC_INFO = {
   D: { nome: "Dominância", cor: "#B23A2E", desc: "Direto, decidido e orientado a resultados. Prefere autonomia, ritmo acelerado e desafios concretos." },
@@ -162,7 +172,8 @@ function Card({ children, style = {} }) {
       style={{
         background: PAPER_RAISED,
         border: `1px solid ${LINE}`,
-        borderRadius: "4px",
+        borderRadius: "10px",
+        boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
         ...style,
       }}
     >
@@ -173,23 +184,36 @@ function Card({ children, style = {} }) {
 
 function Button({ children, onClick, variant = "primary", type = "button", disabled, style = {} }) {
   const base = {
-    fontFamily: "IBM Plex Sans, sans-serif",
+    fontFamily: "Inter, sans-serif",
     fontSize: "13.5px",
     fontWeight: 600,
-    padding: "10px 18px",
-    borderRadius: "3px",
+    padding: "10px 20px",
+    borderRadius: "8px",
     cursor: disabled ? "not-allowed" : "pointer",
     display: "inline-flex",
     alignItems: "center",
     gap: "6px",
     border: "1px solid transparent",
     opacity: disabled ? 0.5 : 1,
-    transition: "opacity .15s ease, transform .1s ease",
+    transition: "all .15s ease",
+    letterSpacing: "0.01em",
   };
   const variants = {
-    primary: { background: NAVY, color: "#fff" },
-    ghost: { background: "transparent", color: NAVY, border: `1px solid ${LINE}` },
-    danger: { background: "transparent", color: "#B23A2E", border: `1px solid #B23A2E33` },
+    primary: {
+      background: `linear-gradient(135deg, ${GOL_ORANGE}, ${GOL_ORANGE_DARK})`,
+      color: "#fff",
+      boxShadow: `0 4px 14px ${GOL_ORANGE}44`,
+    },
+    ghost: {
+      background: "transparent",
+      color: GOL_ORANGE,
+      border: `1.5px solid ${GOL_ORANGE}`,
+    },
+    danger: {
+      background: "transparent",
+      color: "#E53935",
+      border: `1px solid #E5393533`,
+    },
   };
   return (
     <button
@@ -197,7 +221,9 @@ function Button({ children, onClick, variant = "primary", type = "button", disab
       disabled={disabled}
       onClick={onClick}
       style={{ ...base, ...variants[variant], ...style }}
-      onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.98)")}
+      onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.filter = "brightness(1.08)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.filter = ""; }}
+      onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
       onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
     >
       {children}
@@ -207,16 +233,17 @@ function Button({ children, onClick, variant = "primary", type = "button", disab
 
 function Field({ label, children }) {
   return (
-    <label style={{ display: "block", marginBottom: "14px" }}>
+    <label style={{ display: "block", marginBottom: "16px" }}>
       <span
         style={{
           display: "block",
-          fontFamily: "IBM Plex Mono, monospace",
-          fontSize: "11px",
-          letterSpacing: "0.06em",
+          fontFamily: "Inter, sans-serif",
+          fontSize: "11.5px",
+          letterSpacing: "0.07em",
           textTransform: "uppercase",
           color: NAVY_SOFT,
-          marginBottom: "6px",
+          fontWeight: 600,
+          marginBottom: "7px",
         }}
       >
         {label}
@@ -228,14 +255,16 @@ function Field({ label, children }) {
 
 const inputStyle = {
   width: "100%",
-  fontFamily: "IBM Plex Sans, sans-serif",
+  fontFamily: "Inter, sans-serif",
   fontSize: "14px",
-  padding: "10px 12px",
-  border: `1px solid ${LINE}`,
-  borderRadius: "3px",
+  padding: "11px 14px",
+  border: `1.5px solid ${LINE}`,
+  borderRadius: "8px",
   background: "#fff",
   color: INK,
   boxSizing: "border-box",
+  outline: "none",
+  transition: "border-color .2s",
 };
 
 function Badge({ children, color }) {
@@ -243,12 +272,12 @@ function Badge({ children, color }) {
     <span
       style={{
         display: "inline-block",
-        fontFamily: "IBM Plex Mono, monospace",
+        fontFamily: "Inter, sans-serif",
         fontSize: "11px",
-        fontWeight: 600,
-        letterSpacing: "0.03em",
-        padding: "3px 8px",
-        borderRadius: "3px",
+        fontWeight: 700,
+        letterSpacing: "0.04em",
+        padding: "3px 10px",
+        borderRadius: "20px",
         color: "#fff",
         background: color,
       }}
@@ -314,59 +343,104 @@ function AuthScreen({ users, onLogin, onRegister }) {
     <div
       style={{
         minHeight: "100vh",
-        background: PAPER,
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "IBM Plex Sans, sans-serif",
+        fontFamily: "Inter, sans-serif",
         color: INK,
-        padding: "24px",
       }}
     >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        * { box-sizing: border-box; }
+        input:focus, select:focus { border-color: ${GOL_ORANGE} !important; box-shadow: 0 0 0 3px ${GOL_ORANGE}22 !important; }
       `}</style>
-      <div style={{ width: "100%", maxWidth: "420px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-          <Compass scores={{ D: 70, I: 45, S: 60, C: 30 }} size={40} />
-          <span style={{ fontFamily: "IBM Plex Mono, monospace", fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY_SOFT }}>
-            Bússola de Pessoas
-          </span>
-        </div>
-        <h1
-          style={{
-            fontFamily: "Fraunces, serif",
-            fontSize: "32px",
-            fontWeight: 600,
-            margin: "0 0 6px 0",
-          }}
-        >
-          Gestão de Feedback &amp; DISC
-        </h1>
-        <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 28px 0" }}>
-          Histórico de feedback, agenda de conversas e perfil comportamental — tudo em um lugar.
-        </p>
 
-        <Card style={{ padding: "24px" }}>
-          <div style={{ display: "flex", gap: "4px", marginBottom: "20px", borderBottom: `1px solid ${LINE}` }}>
+      {/* LEFT PANEL – Branding */}
+      <div style={{
+        flex: "0 0 42%",
+        background: GOL_SIDEBAR,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        padding: "48px 48px 40px",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        {/* Decorative circles */}
+        <div style={{ position: "absolute", top: "-80px", right: "-80px", width: "340px", height: "340px", borderRadius: "50%", background: `${GOL_ORANGE}18`, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: "-60px", left: "-60px", width: "260px", height: "260px", borderRadius: "50%", background: `${GOL_ORANGE}12`, pointerEvents: "none" }} />
+
+        {/* Logo / brand */}
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "56px" }}>
+            <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: GOL_ORANGE, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <CompassIcon size={20} color="#fff" />
+            </div>
+            <span style={{ color: "#fff", fontWeight: 700, fontSize: "17px", letterSpacing: "0.01em" }}>Bússola de Pessoas</span>
+          </div>
+
+          <h1 style={{ color: "#fff", fontWeight: 800, fontSize: "36px", lineHeight: 1.15, margin: "0 0 18px 0" }}>
+            Gestão de<br />
+            <span style={{ color: GOL_ORANGE }}>Feedback & DISC</span>
+          </h1>
+          <p style={{ color: "#aaa", fontSize: "14.5px", lineHeight: 1.65, margin: 0, maxWidth: "320px" }}>
+            Histórico de feedback, agenda de conversas e perfil comportamental — tudo em um só lugar para sua equipe.
+          </p>
+
+          <div style={{ marginTop: "40px", display: "flex", flexDirection: "column", gap: "14px" }}>
+            {[
+              { icon: "🎯", text: "Feedback estruturado por perfil DISC" },
+              { icon: "📅", text: "Agenda de conversas 1:1" },
+              { icon: "🧭", text: "Teste DISC integrado e automático" },
+            ].map((item, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <span style={{ fontSize: "18px" }}>{item.icon}</span>
+                <span style={{ color: "#ccc", fontSize: "13.5px" }}>{item.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p style={{ color: "#555", fontSize: "12px", margin: 0 }}>
+          © 2025 GOL Linhas Aéreas · Gestão de Pessoas
+        </p>
+      </div>
+
+      {/* RIGHT PANEL – Form */}
+      <div style={{
+        flex: 1,
+        background: "#fff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "40px 32px",
+      }}>
+        <div style={{ width: "100%", maxWidth: "400px" }}>
+          <h2 style={{ fontWeight: 800, fontSize: "26px", margin: "0 0 4px 0" }}>
+            {mode === "login" ? "Bem-vindo de volta" : "Criar conta"}
+          </h2>
+          <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 28px 0" }}>
+            {mode === "login" ? "Entre com suas credenciais para continuar." : "Preencha os dados para acessar o sistema."}
+          </p>
+
+          {/* Tab switcher */}
+          <div style={{ display: "flex", gap: "0", marginBottom: "28px", background: PAPER, borderRadius: "10px", padding: "4px" }}>
             {["login", "register"].map((m) => (
               <button
                 key={m}
-                onClick={() => {
-                  setMode(m);
-                  setError("");
-                }}
+                onClick={() => { setMode(m); setError(""); }}
                 style={{
                   flex: 1,
-                  background: "none",
+                  background: mode === m ? "#fff" : "transparent",
                   border: "none",
-                  padding: "10px 0",
-                  fontFamily: "IBM Plex Sans, sans-serif",
+                  padding: "9px 0",
+                  fontFamily: "Inter, sans-serif",
                   fontSize: "13.5px",
                   fontWeight: 600,
-                  color: mode === m ? NAVY : "#9AA192",
-                  borderBottom: mode === m ? `2px solid ${NAVY}` : "2px solid transparent",
+                  color: mode === m ? INK : NAVY_SOFT,
+                  borderRadius: "8px",
                   cursor: "pointer",
+                  boxShadow: mode === m ? "0 1px 6px rgba(0,0,0,0.1)" : "none",
+                  transition: "all .2s",
                 }}
               >
                 {m === "login" ? "Entrar" : "Criar conta"}
@@ -377,26 +451,26 @@ function AuthScreen({ users, onLogin, onRegister }) {
           {mode === "login" ? (
             <form onSubmit={handleLogin}>
               <Field label="Usuário">
-                <input style={inputStyle} value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />
+                <input style={inputStyle} value={username} onChange={(e) => setUsername(e.target.value)} autoFocus placeholder="seu.usuario" />
               </Field>
               <Field label="Senha">
-                <input type="password" style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} />
+                <input type="password" style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
               </Field>
-              {error && <p style={{ color: "#B23A2E", fontSize: "13px", marginTop: "-4px" }}>{error}</p>}
-              <Button type="submit" style={{ width: "100%", justifyContent: "center", marginTop: "6px" }}>
-                <ShieldCheck size={16} /> Entrar
+              {error && <p style={{ color: "#E53935", fontSize: "13px", marginTop: "-8px", marginBottom: "12px" }}>{error}</p>}
+              <Button type="submit" style={{ width: "100%", justifyContent: "center", marginTop: "6px", padding: "13px 20px", fontSize: "14px" }}>
+                <ShieldCheck size={16} /> Entrar na plataforma
               </Button>
             </form>
           ) : (
             <form onSubmit={handleRegister}>
               <Field label="Nome completo">
-                <input style={inputStyle} value={nome} onChange={(e) => setNome(e.target.value)} autoFocus />
+                <input style={inputStyle} value={nome} onChange={(e) => setNome(e.target.value)} autoFocus placeholder="Seu nome completo" />
               </Field>
               <Field label="Usuário">
-                <input style={inputStyle} value={username} onChange={(e) => setUsername(e.target.value)} />
+                <input style={inputStyle} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="nome.sobrenome" />
               </Field>
               <Field label="Senha">
-                <input type="password" style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} />
+                <input type="password" style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
               </Field>
               {gestores.length > 0 && (
                 <Field label="Papel">
@@ -408,15 +482,16 @@ function AuthScreen({ users, onLogin, onRegister }) {
                         onClick={() => setRole(r)}
                         style={{
                           flex: 1,
-                          padding: "9px 0",
-                          borderRadius: "3px",
-                          border: `1px solid ${role === r ? NAVY : LINE}`,
-                          background: role === r ? NAVY : "#fff",
+                          padding: "10px 0",
+                          borderRadius: "8px",
+                          border: `1.5px solid ${role === r ? GOL_ORANGE : LINE}`,
+                          background: role === r ? GOL_ORANGE : "#fff",
                           color: role === r ? "#fff" : INK,
-                          fontFamily: "IBM Plex Sans, sans-serif",
+                          fontFamily: "Inter, sans-serif",
                           fontSize: "13px",
                           fontWeight: 600,
                           cursor: "pointer",
+                          transition: "all .2s",
                         }}
                       >
                         {r === "colaborador" ? "Colaborador" : "Gestor"}
@@ -426,32 +501,31 @@ function AuthScreen({ users, onLogin, onRegister }) {
                 </Field>
               )}
               {gestores.length === 0 && (
-                <p style={{ fontSize: "12.5px", color: NAVY_SOFT, background: PAPER, padding: "10px", borderRadius: "3px", marginBottom: "14px" }}>
+                <div style={{ fontSize: "12.5px", color: NAVY_SOFT, background: "#FFF5F0", border: `1px solid ${GOL_ORANGE}44`, padding: "12px 14px", borderRadius: "8px", marginBottom: "16px" }}>
                   Ainda não há nenhum gestor cadastrado — esta primeira conta será criada como <b>Gestor</b>.
-                </p>
+                </div>
               )}
               {role === "colaborador" && gestores.length > 0 && (
                 <Field label="Seu gestor">
                   <select style={inputStyle} value={gestorId} onChange={(e) => setGestorId(e.target.value)}>
                     <option value="">Selecione…</option>
                     {gestores.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.name}
-                      </option>
+                      <option key={g.id} value={g.id}>{g.name}</option>
                     ))}
                   </select>
                 </Field>
               )}
-              {error && <p style={{ color: "#B23A2E", fontSize: "13px", marginTop: "-4px" }}>{error}</p>}
-              <Button type="submit" style={{ width: "100%", justifyContent: "center", marginTop: "6px" }}>
-                <Sparkles size={16} /> Criar conta
+              {error && <p style={{ color: "#E53935", fontSize: "13px", marginTop: "-8px", marginBottom: "12px" }}>{error}</p>}
+              <Button type="submit" style={{ width: "100%", justifyContent: "center", marginTop: "6px", padding: "13px 20px", fontSize: "14px" }}>
+                <Sparkles size={16} /> Criar minha conta
               </Button>
             </form>
           )}
-        </Card>
-        <p style={{ fontSize: "11.5px", color: "#9AA192", marginTop: "16px", lineHeight: 1.5 }}>
-          Os dados ficam salvos no Firestore, compartilhados entre todos que acessarem este site — pensado para uso interno de equipe, não para senhas sensíveis.
-        </p>
+
+          <p style={{ fontSize: "11.5px", color: "#bbb", marginTop: "24px", lineHeight: 1.5, textAlign: "center" }}>
+            Os dados ficam salvos no Firestore, compartilhados em tempo real entre todos os usuários.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -1523,8 +1597,11 @@ export default function App() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: PAPER, fontFamily: "IBM Plex Sans, sans-serif", color: NAVY_SOFT }}>
-        Carregando…
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: GOL_SIDEBAR, fontFamily: "Inter, sans-serif" }}>
+        <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: GOL_ORANGE, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "16px" }}>
+          <CompassIcon size={22} color="#fff" />
+        </div>
+        <span style={{ color: "#888", fontSize: "14px", letterSpacing: "0.04em" }}>Carregando…</span>
       </div>
     );
   }
@@ -1534,43 +1611,53 @@ export default function App() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: PAPER, fontFamily: "IBM Plex Sans, sans-serif", color: INK }}>
+    <div style={{ minHeight: "100vh", background: PAPER, fontFamily: "Inter, sans-serif", color: INK }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
+        input:focus, select:focus, textarea:focus { border-color: ${GOL_ORANGE} !important; box-shadow: 0 0 0 3px ${GOL_ORANGE}22 !important; outline: none; }
         @media (max-width: 780px) {
           .app-shell { flex-direction: column !important; }
-          .app-sidebar { width: 100% !important; flex-direction: row !important; overflow-x: auto; padding: 10px !important; }
+          .app-sidebar { width: 100% !important; flex-direction: row !important; overflow-x: auto; padding: 10px 12px !important; min-height: unset !important; }
           .app-sidebar .nav-list { flex-direction: row !important; }
           .dash-grid { grid-template-columns: 1fr !important; }
           .form-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
       <div className="app-shell" style={{ display: "flex", minHeight: "100vh" }}>
-        <div className="app-sidebar" style={{ width: "230px", borderRight: `1px solid ${LINE}`, padding: "22px 16px", display: "flex", flexDirection: "column", background: PAPER_RAISED }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "26px", paddingLeft: "6px" }}>
-            <CompassIcon size={20} color={NAVY} />
-            <span style={{ fontFamily: "Fraunces, serif", fontWeight: 600, fontSize: "16px" }}>Bússola</span>
+
+        {/* ── DARK SIDEBAR ── */}
+        <div className="app-sidebar" style={{
+          width: "240px",
+          minHeight: "100vh",
+          background: GOL_SIDEBAR,
+          display: "flex",
+          flexDirection: "column",
+          padding: "24px 14px",
+          flexShrink: 0,
+        }}>
+          {/* Logo */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", paddingLeft: "8px" }}>
+            <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: GOL_ORANGE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <CompassIcon size={17} color="#fff" />
+            </div>
+            <span style={{ color: "#fff", fontWeight: 700, fontSize: "15px" }}>Bússola</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "20px", paddingLeft: "6px" }}>
+
+          {/* Firebase status indicator */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "28px", paddingLeft: "8px" }}>
             <span style={{
-              width: "7px",
-              height: "7px",
-              borderRadius: "50%",
-              backgroundColor: isFirebaseConfigured ? "#3F7A5E" : "#C8952B",
-              display: "inline-block"
+              width: "6px", height: "6px", borderRadius: "50%",
+              backgroundColor: isFirebaseConfigured ? "#4CAF50" : "#FF9800",
+              display: "inline-block", flexShrink: 0
             }} />
-            <span style={{
-              fontSize: "10.5px",
-              fontFamily: "IBM Plex Mono, monospace",
-              color: NAVY_SOFT,
-              textTransform: "uppercase",
-              letterSpacing: "0.05em"
-            }}>
-              {isFirebaseConfigured ? "Nuvem (Firebase)" : "Modo Local (Offline)"}
+            <span style={{ fontSize: "10px", color: "#555", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              {isFirebaseConfigured ? "Nuvem ativa" : "Modo local"}
             </span>
           </div>
-          <div className="nav-list" style={{ display: "flex", flexDirection: "column", gap: "3px", flex: 1 }}>
+
+          {/* Nav items */}
+          <div className="nav-list" style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = page === item.id;
@@ -1584,38 +1671,56 @@ export default function App() {
                     gap: "10px",
                     padding: "10px 12px",
                     border: "none",
-                    borderRadius: "3px",
-                    background: active ? NAVY : "transparent",
-                    color: active ? "#fff" : INK,
-                    fontFamily: "IBM Plex Sans, sans-serif",
+                    borderRadius: "8px",
+                    background: active ? GOL_ORANGE : "transparent",
+                    color: active ? "#fff" : "#999",
+                    fontFamily: "Inter, sans-serif",
                     fontSize: "13.5px",
-                    fontWeight: 600,
+                    fontWeight: active ? 600 : 500,
                     cursor: "pointer",
                     whiteSpace: "nowrap",
                     textAlign: "left",
+                    transition: "all .15s ease",
+                    boxShadow: active ? `0 4px 12px ${GOL_ORANGE}55` : "none",
                   }}
+                  onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = GOL_SIDEBAR_HOVER; e.currentTarget.style.color = "#fff"; }}
+                  onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#999"; } }}
                 >
                   <Icon size={16} /> {item.label}
                 </button>
               );
             })}
           </div>
-          <div style={{ borderTop: `1px solid ${LINE}`, paddingTop: "14px", marginTop: "14px" }}>
-            <div style={{ fontSize: "13px", fontWeight: 600 }}>{currentUser.name}</div>
-            <div style={{ fontSize: "11.5px", color: NAVY_SOFT, marginBottom: "10px", textTransform: "capitalize" }}>{currentUser.role}</div>
+
+          {/* User info + logout */}
+          <div style={{ borderTop: "1px solid #2a2a2a", paddingTop: "16px", marginTop: "14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+              <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: GOL_ORANGE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <span style={{ color: "#fff", fontWeight: 700, fontSize: "13px" }}>
+                  {currentUser.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div style={{ overflow: "hidden" }}>
+                <div style={{ fontSize: "13px", fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{currentUser.name}</div>
+                <div style={{ fontSize: "11px", color: "#666", textTransform: "capitalize" }}>{currentUser.role}</div>
+              </div>
+            </div>
             <button
               onClick={() => {
                 setCurrentUser(null);
                 localStorage.removeItem("disc_currentUser");
               }}
-              style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#B23A2E", fontSize: "12.5px", fontWeight: 600, cursor: "pointer", padding: 0 }}
+              style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#555", fontSize: "12.5px", fontWeight: 500, cursor: "pointer", padding: "6px 4px", borderRadius: "6px", transition: "color .15s" }}
+              onMouseEnter={(e) => e.currentTarget.style.color = "#E53935"}
+              onMouseLeave={(e) => e.currentTarget.style.color = "#555"}
             >
               <LogOut size={14} /> Sair
             </button>
           </div>
         </div>
 
-        <div style={{ flex: 1, padding: "32px", maxWidth: "980px" }}>
+        {/* ── CONTENT AREA ── */}
+        <div style={{ flex: 1, padding: "36px 40px", maxWidth: "1000px", overflowX: "hidden" }}>
           {page === "dashboard" && (
             <Dashboard user={currentUser} users={users} feedbacks={feedbacks} agenda={agenda} discResults={discResults} goTo={setPage} />
           )}
