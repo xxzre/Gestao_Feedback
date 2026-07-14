@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Permite que qualquer usuário autenticado leia os perfis e que o próprio usuário crie/atualize o seu
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Permite leitura e escrita de feedbacks se o usuário estiver autenticado
+    match /feedbacks/{feedbackId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Permite leitura e escrita da agenda se o usuário estiver autenticado
+    match /agenda/{agendaId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Permite leitura e escrita de resultados do DISC
+    match /discResults/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

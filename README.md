@@ -24,28 +24,33 @@ faça o passo 2.
    dê um nome qualquer ao app.
 3. O Firebase vai mostrar um bloco `firebaseConfig = {...}`. Copie esses
    valores para o arquivo `src/firebase.js`, substituindo os `SEU_...`.
-4. No menu lateral esquerdo, vá em **Firestore Database** → **Criar banco
-   de dados** → escolha uma região (ex: `southamerica-east1`) → modo de
-   produção.
-5. Depois de criado, vá na aba **Regras** e cole isto (libera leitura e
-   escrita para o app funcionar — veja o aviso de segurança abaixo):
+4. No menu lateral esquerdo, vá em **Firestore Database** → **Criar banco de dados** → escolha uma região (ex: `southamerica-east1`) → modo de produção.
+5. No menu lateral esquerdo, vá em **Authentication** → **Get Started** / **Começar** → ative o método de login por **E-mail/Senha** (Email/Password).
+6. Depois de criado o Firestore, vá na aba **Regras** (Rules) do Firestore Database e cole as regras seguras definidas em `firestore.rules` (ou use a CLI do Firebase):
 
 ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /feedbacks/{feedbackId} {
+      allow read, write: if request.auth != null;
+    }
+    match /agenda/{agendaId} {
+      allow read, write: if request.auth != null;
+    }
+    match /discResults/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
 ```
 
-> ⚠️ **Aviso de segurança:** essa regra deixa o banco aberto para qualquer
-> pessoa que descobrir a URL do seu projeto Firebase — ok para uso interno
-> de equipe/teste, mas não guarde dados sensíveis de verdade nem senhas
-> reais de outros sistemas. Se quiser travar mais, dá pra restringir por
-> Firebase Authentication depois.
+> 🔒 **Segurança Ativada:** o banco de dados agora está devidamente seguro e protegido. Apenas usuários autenticados via Firebase Authentication possuem acesso de leitura/escrita, e um usuário não pode modificar os dados DISC ou cadastrais de outros usuários.
 
 Salve, rode `npm run dev` de novo e crie sua primeira conta (ela vira
 Gestor automaticamente).

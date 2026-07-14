@@ -24,10 +24,17 @@ import {
   addDoc,
   doc,
   setDoc,
+  getDoc,
   updateDoc,
   onSnapshot,
 } from "firebase/firestore";
-import { db, isFirebaseConfigured } from "./firebase";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from "firebase/auth";
+import { db, isFirebaseConfigured, auth } from "./firebase";
 
 /* ---------------------------------------------------------------------- */
 /*  Tokens                                                                 */
@@ -301,42 +308,81 @@ function AuthScreen({ users, onLogin, onRegister }) {
 
   const gestores = users.filter((u) => u.role === "gestor");
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const u = users.find((x) => x.username === username.trim().toLowerCase());
-    if (!u || u.password !== password) {
-      setError("Usuário ou senha incorretos.");
+    const email = username.trim().toLowerCase();
+    if (!email || !password) {
+      setError("Preencha usuário/e-mail e senha.");
       return;
     }
     setError("");
-    onLogin(u);
+    
+    if (isFirebaseConfigured) {
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        // O onAuthStateChanged tratará o set do currentUser
+      } catch (err) {
+        console.error(err);
+        setError("Erro ao entrar: " + (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password" ? "Usuário ou senha incorretos." : err.message));
+      }
+    } else {
+      const u = users.find((x) => x.username === email);
+      if (!u || u.password !== password) {
+        setError("Usuário ou senha incorretos.");
+        return;
+      }
+      onLogin(u);
+    }
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    const uname = username.trim().toLowerCase();
-    if (!uname || !password || !nome.trim()) {
-      setError("Preencha nome, usuário e senha.");
+    const email = username.trim().toLowerCase();
+    if (!email || !password || !nome.trim()) {
+      setError("Preencha nome, usuário/e-mail e senha.");
       return;
     }
-    if (users.some((x) => x.username === uname)) {
-      setError("Esse usuário já existe.");
+    if (isFirebaseConfigured && !email.includes("@")) {
+      setError("Insira um e-mail válido (exemplo: seu@email.com).");
       return;
     }
     if (role === "colaborador" && gestores.length > 0 && !gestorId) {
       setError("Selecione o gestor responsável.");
       return;
     }
-    const novo = {
-      id: uid(),
-      username: uname,
-      password,
-      name: nome.trim(),
-      role: gestores.length === 0 ? "gestor" : role,
-      gestorId: role === "colaborador" ? gestorId : null,
-    };
     setError("");
-    onRegister(novo);
+
+    if (isFirebaseConfigured) {
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const uid = userCredential.user.uid;
+        const novo = {
+          email: email,
+          name: nome.trim(),
+          role: gestores.length === 0 ? "gestor" : role,
+          gestorId: role === "colaborador" ? gestorId : null,
+        };
+        // Salva dados adicionais no Firestore sem a senha
+        await setDoc(doc(db, "users", uid), novo);
+      } catch (err) {
+        console.error(err);
+        setError("Erro ao cadastrar: " + (err.code === "auth/email-already-in-use" ? "Este e-mail já está em uso." : err.message));
+      }
+    } else {
+      if (users.some((x) => x.username === email)) {
+        setError("Esse usuário já existe.");
+        return;
+      }
+      const novo = {
+        id: uid(),
+        username: email,
+        password,
+        name: nome.trim(),
+        role: gestores.length === 0 ? "gestor" : role,
+        gestorId: role === "colaborador" ? gestorId : null,
+      };
+      onRegister(novo);
+    }
   };
 
   return (
@@ -1469,10 +1515,7 @@ export default function App() {
   const [feedbacks, setFeedbacks] = useState([]);
   const [agenda, setAgenda] = useState([]);
   const [discResults, setDiscResults] = useState({});
-  const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem("disc_currentUser");
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [currentUser, setCurrentUser] = useState(null);
   const [page, setPage] = useState("dashboard");
 
   // Assina as coleções do Firestore em tempo real se configurado: qualquer alteração feita
@@ -1481,7 +1524,6 @@ export default function App() {
     if (isFirebaseConfigured) {
       const unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
         setUsers(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setLoading(false);
       });
       const unsubFeedbacks = onSnapshot(collection(db, "feedbacks"), (snap) => {
         setFeedbacks(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
@@ -1496,13 +1538,39 @@ export default function App() {
         });
         setDiscResults(map);
       });
+
+      // Escuta mudanças de autenticação do Firebase
+      const unsubAuth = onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          // Busca o doc de dados complementares do usuário
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const loggedUser = { id: user.uid, ...userDoc.data() };
+            setCurrentUser(loggedUser);
+            localStorage.setItem("disc_currentUser", JSON.stringify(loggedUser));
+          } else {
+            // Em cenários de descontinuidade de dados complementares
+            setCurrentUser({ id: user.uid, email: user.email, name: user.email.split("@")[0], role: "colaborador" });
+          }
+        } else {
+          setCurrentUser(null);
+          localStorage.removeItem("disc_currentUser");
+        }
+        setLoading(false);
+      });
+
       return () => {
         unsubUsers();
         unsubFeedbacks();
         unsubAgenda();
         unsubDisc();
+        unsubAuth();
       };
     } else {
+      const savedUser = localStorage.getItem("disc_currentUser");
+      if (savedUser) {
+        setCurrentUser(JSON.parse(savedUser));
+      }
       const localUsers = JSON.parse(localStorage.getItem("disc_users") || "[]");
       const localFeedbacks = JSON.parse(localStorage.getItem("disc_feedbacks") || "[]");
       const localAgenda = JSON.parse(localStorage.getItem("disc_agenda") || "[]");
@@ -1516,22 +1584,18 @@ export default function App() {
   }, []);
 
   const handleRegister = async (novo) => {
-    if (isFirebaseConfigured) {
-      const { id: _drop, ...data } = novo; // o id de verdade vem do Firestore
-      const docRef = await addDoc(collection(db, "users"), data);
-      const loggedUser = { id: docRef.id, ...data };
-      setCurrentUser(loggedUser);
-      localStorage.setItem("disc_currentUser", JSON.stringify(loggedUser));
-    } else {
-      const updatedUsers = [...users, novo];
-      setUsers(updatedUsers);
-      localStorage.setItem("disc_users", JSON.stringify(updatedUsers));
-      setCurrentUser(novo);
-      localStorage.setItem("disc_currentUser", JSON.stringify(novo));
-    }
+    // Esse método agora é apenas o fallback off-line, pois o fluxo principal no AuthScreen
+    // com Firebase configurado chama diretamente createUserWithEmailAndPassword.
+    const updatedUsers = [...users, novo];
+    setUsers(updatedUsers);
+    localStorage.setItem("disc_users", JSON.stringify(updatedUsers));
+    setCurrentUser(novo);
+    localStorage.setItem("disc_currentUser", JSON.stringify(novo));
   };
 
   const handleLogin = (u) => {
+    // Esse método agora é apenas o fallback off-line, pois o fluxo principal no AuthScreen
+    // com Firebase configurado chama diretamente signInWithEmailAndPassword.
     setCurrentUser(u);
     localStorage.setItem("disc_currentUser", JSON.stringify(u));
     setPage("dashboard");
@@ -1707,8 +1771,12 @@ export default function App() {
             </div>
             <button
               onClick={() => {
-                setCurrentUser(null);
-                localStorage.removeItem("disc_currentUser");
+                if (isFirebaseConfigured) {
+                  signOut(auth);
+                } else {
+                  setCurrentUser(null);
+                  localStorage.removeItem("disc_currentUser");
+                }
               }}
               style={{ display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#555", fontSize: "12.5px", fontWeight: 500, cursor: "pointer", padding: "6px 4px", borderRadius: "6px", transition: "color .15s" }}
               onMouseEnter={(e) => e.currentTarget.style.color = "#E53935"}

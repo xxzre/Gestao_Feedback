@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 // 1) Vá em https://console.firebase.google.com, crie um projeto (gratuito).
 // 2) No projeto, clique no ícone "</>" para adicionar um app Web.
@@ -23,3 +24,4 @@ export const isFirebaseConfigured =
 
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+export const auth = getAuth(app);
