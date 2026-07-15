@@ -702,6 +702,7 @@ function Dashboard({ user, users, feedbacks, agenda, discResults, goTo }) {
 function ColaboradoresPage({ user, users, discResults }) {
   const isAdmin = user.role === "admin";
   const equipe = isAdmin ? users.filter((u) => u.role === "colaborador") : users.filter((u) => u.gestorId === user.id);
+  return (
     <div>
       <h2 style={{ fontFamily: "Fraunces, serif", fontSize: "26px", fontWeight: 600, margin: "0 0 4px 0" }}>Colaboradores</h2>
       <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 22px 0" }}>Sua equipe e o perfil comportamental de cada pessoa.</p>
