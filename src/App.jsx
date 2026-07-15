@@ -1831,11 +1831,11 @@ export default function App() {
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
               <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: GOL_ORANGE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <span style={{ color: "#fff", fontWeight: 700, fontSize: "13px" }}>
-                  {currentUser.name.charAt(0).toUpperCase()}
+                  {(currentUser?.name || currentUser?.username || "U").charAt(0).toUpperCase()}
                 </span>
               </div>
               <div style={{ overflow: "hidden" }}>
-                <div style={{ fontSize: "13px", fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{currentUser.name}</div>
+                <div style={{ fontSize: "13px", fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{currentUser?.name || currentUser?.username || "Usuario"}</div>
                 <div style={{ marginTop: "4px" }}>
                   <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", padding: "2px 7px", borderRadius: "10px", background: currentUser.role === "admin" ? "#FF6F1F" : currentUser.role === "gestor" ? "#1e3a5f" : "#2a2a2a", color: currentUser.role === "admin" ? "#fff" : currentUser.role === "gestor" ? "#8BB8D4" : "#888", border: "1px solid " + (currentUser.role === "admin" ? "#FF6F1F66" : currentUser.role === "gestor" ? "#35577A66" : "#333") }}>{currentUser.role === "admin" ? "ADMIN" : currentUser.role === "gestor" ? "GESTOR" : "COLABORADOR"}</span>
                 </div>
@@ -1861,11 +1861,15 @@ export default function App() {
 
         {/* ── CONTENT AREA ── */}
         <div style={{ flex: 1, padding: "36px 40px", maxWidth: "1000px", overflowX: "hidden" }}>
+          
           {page === "dashboard" && (
             <Dashboard user={currentUser} users={users} feedbacks={feedbacks} agenda={agenda} discResults={discResults} goTo={setPage} />
           )}
-          {page === "colaboradores" && currentUser.role === "gestor" && (
+          {page === "colaboradores" && (currentUser?.role === "gestor" || currentUser?.role === "admin") && (
             <ColaboradoresPage user={currentUser} users={users} discResults={discResults} />
+          )}
+          {page === "gestores" && currentUser?.role === "admin" && (
+            <GestoresPage users={users} discResults={discResults} feedbacks={feedbacks} />
           )}
           {page === "feedbacks" && (
             <FeedbacksPage user={currentUser} users={users} feedbacks={feedbacks} onCreate={handleCreateFeedback} />
@@ -1873,10 +1877,10 @@ export default function App() {
           {page === "agenda" && (
             <AgendaPage user={currentUser} users={users} agenda={agenda} onCreate={handleCreateAgenda} onUpdateStatus={handleUpdateAgendaStatus} />
           )}
-          {page === "disc" && currentUser.role === "colaborador" && (
+          {page === "disc" && currentUser?.role === "colaborador" && (
             <DiscPage user={currentUser} discResult={discResults[currentUser.id]} onSave={handleSaveDisc} />
           )}
-          {page === "guiaDisc" && currentUser.role === "gestor" && (
+          {page === "guiaDisc" && (currentUser?.role === "gestor" || currentUser?.role === "admin") && (
             <GuiaDiscPage />
           )}
         </div>

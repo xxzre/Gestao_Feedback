@@ -1,10 +1,11 @@
 ﻿rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permite que qualquer usuario autenticado leia os perfis e que o proprio usuario crie/atualize o seu
+    // Leitura publica de usuarios (permitindo selecionar gestores no cadastro deslogado)
+    // Escrita permitida para usuarios autenticados
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if true;
+      allow write: if request.auth != null;
     }
     
     // Permite leitura e escrita de feedbacks se o usuario estiver autenticado
@@ -19,8 +20,7 @@ service cloud.firestore {
     
     // Permite leitura e escrita de resultados do DISC
     match /discResults/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null;
     }
   }
 }
