@@ -107,6 +107,24 @@ function CameraIcon({ size = 14 }) {
   );
 }
 
+function MessageCircleIcon({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+    </svg>
+  );
+}
+
+function UsersGroupIcon({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+}
+
 function EyeIcon({ size = 18 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1825,6 +1843,422 @@ function ConfiguracoesPage({ user, onUpdateUser }) {
     </div>
   );
 }
+/* ---------------------------------------------------------------------- */
+/*  ChatPage                                                              */
+/* ---------------------------------------------------------------------- */
+function ChatPage({ user, users }) {
+  const [chats, setChats] = useState([]);
+  const [activeChatId, setActiveChatId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessageText, setNewMessageText] = useState("");
+  const [showNewDirectModal, setShowNewDirectModal] = useState(false);
+  const [showNewGroupModal, setShowNewGroupModal] = useState(false);
+  const [groupName, setGroupName] = useState("");
+  const [selectedGroupMembers, setSelectedGroupMembers] = useState([]);
+
+  useEffect(() => {
+    if (!isFirebaseConfigured || !user?.id) return;
+    const q = collection(db, "chats");
+    const unsub = onSnapshot(q, (snap) => {
+      const list = [];
+      snap.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.participantes && data.participantes.includes(user.id)) {
+          list.push({ id: docSnap.id, ...data });
+        }
+      });
+      list.sort((a, b) => (b.atualizadoEm || 0) - (a.atualizadoEm || 0));
+      setChats(list);
+      if (list.length > 0 && !activeChatId) {
+        setActiveChatId(list[0].id);
+      }
+    });
+    return () => unsub();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!isFirebaseConfigured || !activeChatId) return;
+    const qMsgs = collection(db, "chats", activeChatId, "messages");
+    const unsubMsgs = onSnapshot(qMsgs, (snap) => {
+      const mList = [];
+      snap.forEach((docSnap) => {
+        mList.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      mList.sort((a, b) => (a.criadoEm || 0) - (b.criadoEm || 0));
+      setMessages(mList);
+    });
+    return () => unsubMsgs();
+  }, [activeChatId]);
+
+  const activeChat = chats.find((c) => c.id === activeChatId);
+
+  const startDirectChat = async (targetUser) => {
+    setShowNewDirectModal(false);
+    const existing = chats.find((c) => c.tipo === "direta" && c.participantes.includes(targetUser.id));
+    if (existing) {
+      setActiveChatId(existing.id);
+      return;
+    }
+    const newChatId = uid();
+    const chatData = {
+      tipo: "direta",
+      participantes: [user.id, targetUser.id],
+      participantesInfo: {
+        [user.id]: { name: user.name, photoURL: user.photoURL || "", role: user.role },
+        [targetUser.id]: { name: targetUser.name, photoURL: targetUser.photoURL || "", role: targetUser.role },
+      },
+      criadoEm: Date.now(),
+      atualizadoEm: Date.now(),
+      ultimaMensagem: "Conversa iniciada",
+    };
+    if (isFirebaseConfigured) {
+      await setDoc(doc(db, "chats", newChatId), chatData);
+    }
+    setActiveChatId(newChatId);
+  };
+
+  const handleCreateGroup = async (e) => {
+    e.preventDefault();
+    if (!groupName.trim() || selectedGroupMembers.length === 0) return;
+    setShowNewGroupModal(false);
+    const allMembers = [user.id, ...selectedGroupMembers];
+    const infoMap = {
+      [user.id]: { name: user.name, photoURL: user.photoURL || "", role: user.role }
+    };
+    selectedGroupMembers.forEach((mId) => {
+      const u = users.find((x) => x.id === mId);
+      if (u) infoMap[mId] = { name: u.name, photoURL: u.photoURL || "", role: u.role };
+    });
+    const newGroupId = uid();
+    const groupData = {
+      tipo: "grupo",
+      nome: groupName.trim(),
+      criadorId: user.id,
+      participantes: allMembers,
+      participantesInfo: infoMap,
+      criadoEm: Date.now(),
+      atualizadoEm: Date.now(),
+      ultimaMensagem: "Grupo criado",
+    };
+    if (isFirebaseConfigured) {
+      await setDoc(doc(db, "chats", newGroupId), groupData);
+    }
+    setGroupName("");
+    setSelectedGroupMembers([]);
+    setActiveChatId(newGroupId);
+  };
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessageText.trim() || !activeChatId) return;
+    const txt = newMessageText.trim();
+    setNewMessageText("");
+    const msgData = {
+      remetenteId: user.id,
+      remetenteNome: user.name,
+      remetentePhotoURL: user.photoURL || "",
+      texto: txt,
+      criadoEm: Date.now(),
+    };
+    if (isFirebaseConfigured) {
+      await addDoc(collection(db, "chats", activeChatId, "messages"), msgData);
+      await updateDoc(doc(db, "chats", activeChatId), {
+        ultimaMensagem: txt,
+        atualizadoEm: Date.now(),
+      });
+    }
+  };
+
+  const getChatDisplay = (chat) => {
+    if (!chat) return { nome: "", photoURL: "", badge: "" };
+    if (chat.tipo === "grupo") {
+      return { nome: chat.nome, photoURL: "", badge: `${chat.participantes.length} membros` };
+    }
+    const otherId = chat.participantes.find((id) => id !== user.id);
+    const info = chat.participantesInfo ? chat.participantesInfo[otherId] : null;
+    const uObj = users.find((x) => x.id === otherId);
+    const name = info?.name || uObj?.name || "Usuario";
+    const photoURL = info?.photoURL || uObj?.photoURL || "";
+    const role = (info?.role || uObj?.role || "").toUpperCase();
+    return { nome, photoURL, badge: role };
+  };
+
+  const otherUsers = users.filter((u) => u.id !== user.id);
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <div>
+          <h2 style={{ fontFamily: "Fraunces, serif", fontSize: "26px", fontWeight: 600, margin: "0 0 4px 0" }}>Mensagens</h2>
+          <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: 0 }}>Converse com colaboradores, gestores e grupos de trabalho.</p>
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <Button onClick={() => setShowNewDirectModal(true)} style={{ background: GOL_DARK, fontSize: "13px", padding: "8px 14px" }}>
+            <Plus size={15} /> Nova mensagem
+          </Button>
+          <Button onClick={() => setShowNewGroupModal(true)} style={{ fontSize: "13px", padding: "8px 14px" }}>
+            <UsersGroupIcon size={15} /> Criar Grupo
+          </Button>
+        </div>
+      </div>
+
+      <Card style={{ padding: 0, height: "620px", display: "flex", overflow: "hidden", border: `1px solid ${LINE}` }}>
+        <div style={{ width: "300px", borderRight: `1px solid ${LINE}`, background: "#FAFBFD", display: "flex", flexDirection: "column", flexShrink: 0 }}>
+          <div style={{ padding: "14px 16px", borderBottom: `1px solid ${LINE}`, fontWeight: 700, fontSize: "13.5px", color: INK }}>
+            Conversas ({chats.length})
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {chats.length === 0 ? (
+              <div style={{ padding: "30px 16px", textAlign: "center", color: NAVY_SOFT, fontSize: "13px" }}>
+                Nenhuma conversa ainda.<br />Clique acima para iniciar um papo ou criar um grupo!
+              </div>
+            ) : (
+              chats.map((c) => {
+                const display = getChatDisplay(c);
+                const isActive = c.id === activeChatId;
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => setActiveChatId(c.id)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      padding: "12px 14px",
+                      cursor: "pointer",
+                      background: isActive ? "#FFF4ED" : "transparent",
+                      borderLeft: isActive ? `4px solid ${GOL_ORANGE}` : "4px solid transparent",
+                      borderBottom: `1px solid ${LINE}`,
+                      transition: "background .15s",
+                    }}
+                  >
+                    <div style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "50%",
+                      background: c.tipo === "grupo" ? GOL_DARK : display.photoURL ? `url(${display.photoURL}) center/cover` : GOL_ORANGE,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#fff",
+                      fontWeight: 700,
+                      fontSize: "14px",
+                      flexShrink: 0,
+                      overflow: "hidden",
+                    }}>
+                      {c.tipo === "grupo" ? (
+                        <UsersGroupIcon size={18} color="#fff" />
+                      ) : !display.photoURL ? (
+                        display.nome.charAt(0).toUpperCase()
+                      ) : null}
+                    </div>
+                    <div style={{ flex: 1, overflow: "hidden" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontWeight: isActive ? 700 : 600, fontSize: "13.5px", color: INK, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {display.nome}
+                        </div>
+                        {display.badge && (
+                          <span style={{ fontSize: "9.5px", fontWeight: 700, background: "#EAEAEA", color: "#666", padding: "1px 5px", borderRadius: "4px" }}>
+                            {display.badge}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: "12px", color: NAVY_SOFT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: "2px" }}>
+                        {c.ultimaMensagem || "Nenhuma mensagem"}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#FFFFFF" }}>
+          {activeChat ? (
+            <>
+              {(() => {
+                const display = getChatDisplay(activeChat);
+                return (
+                  <div style={{ padding: "14px 20px", borderBottom: `1px solid ${LINE}`, display: "flex", alignItems: "center", gap: "12px", background: "#FFF" }}>
+                    <div style={{
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "50%",
+                      background: activeChat.tipo === "grupo" ? GOL_DARK : display.photoURL ? `url(${display.photoURL}) center/cover` : GOL_ORANGE,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#fff",
+                      fontWeight: 700,
+                      fontSize: "14px",
+                      flexShrink: 0,
+                      overflow: "hidden",
+                    }}>
+                      {activeChat.tipo === "grupo" ? <UsersGroupIcon size={16} /> : !display.photoURL && display.nome.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: "15px", color: INK }}>{display.nome}</div>
+                      <div style={{ fontSize: "11.5px", color: NAVY_SOFT }}>
+                        {activeChat.tipo === "grupo" ? `${activeChat.participantes.length} participantes` : display.badge}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div style={{ flex: 1, padding: "20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "12px", background: "#F9FAFC" }}>
+                {messages.length === 0 ? (
+                  <div style={{ margin: "auto", textAlign: "center", color: NAVY_SOFT, fontSize: "13px" }}>
+                    Nenhuma mensagem enviada nesta conversa.<br />Envie um "Ola!" para comecar.
+                  </div>
+                ) : (
+                  messages.map((m) => {
+                    const isMe = m.remetenteId === user.id;
+                    return (
+                      <div key={m.id} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
+                        {!isMe && (
+                          <div style={{ fontSize: "11px", fontWeight: 600, color: "#666", marginBottom: "3px", marginLeft: "4px" }}>
+                            {m.remetenteNome}
+                          </div>
+                        )}
+                        <div style={{
+                          maxWidth: "70%",
+                          padding: "10px 14px",
+                          borderRadius: isMe ? "14px 14px 2px 14px" : "14px 14px 14px 2px",
+                          background: isMe ? GOL_ORANGE : "#FFFFFF",
+                          color: isMe ? "#FFFFFF" : INK,
+                          boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+                          border: isMe ? "none" : `1px solid ${LINE}`,
+                          fontSize: "13.5px",
+                          lineHeight: 1.45,
+                        }}>
+                          {m.texto}
+                        </div>
+                        <div style={{ fontSize: "10px", color: "#AAA", marginTop: "3px", margin: isMe ? "3px 4px 0 0" : "3px 0 0 4px" }}>
+                          {m.criadoEm ? new Date(m.criadoEm).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <form onSubmit={sendMessage} style={{ padding: "14px 18px", borderTop: `1px solid ${LINE}`, display: "flex", gap: "10px", background: "#FFF" }}>
+                <input
+                  style={{ ...inputStyle, flex: 1, borderRadius: "20px", padding: "10px 16px" }}
+                  placeholder="Escreva sua mensagem privada..."
+                  value={newMessageText}
+                  onChange={(e) => setNewMessageText(e.target.value)}
+                />
+                <Button type="submit" style={{ borderRadius: "20px", padding: "0 20px" }}>
+                  <Send size={15} /> Enviar
+                </Button>
+              </form>
+            </>
+          ) : (
+            <div style={{ margin: "auto", textAlign: "center", color: NAVY_SOFT }}>
+              Selecione uma conversa ao lado para me visualizar o chat.
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {showNewDirectModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "20px" }}>
+          <Card style={{ width: "100%", maxWidth: "420px", padding: "24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Nova Mensagem Direta</h3>
+              <button onClick={() => setShowNewDirectModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#888" }}><X size={18} /></button>
+            </div>
+            <p style={{ fontSize: "13px", color: NAVY_SOFT, marginTop: 0, marginBottom: "16px" }}>Selecione a pessoa para conversar privadamente:</p>
+            <div style={{ maxHeight: "300px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "8px" }}>
+              {otherUsers.map((u) => (
+                <div
+                  key={u.id}
+                  onClick={() => startDirectChat(u)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "10px 12px",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    border: `1px solid ${LINE}`,
+                    transition: "all .15s",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "#F0FAF5"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "#FFF"}
+                >
+                  <div style={{ width: "34px", height: "34px", borderRadius: "50%", background: u.photoURL ? `url(${u.photoURL}) center/cover` : GOL_ORANGE, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: "13px", flexShrink: 0 }}>
+                    {!u.photoURL && u.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: "14px" }}>{u.name}</div>
+                    <span style={{ fontSize: "10px", textTransform: "uppercase", background: "#EAEAEA", padding: "1px 5px", borderRadius: "4px", color: "#555" }}>{u.role}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {showNewGroupModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "20px" }}>
+          <Card style={{ width: "100%", maxWidth: "460px", padding: "24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ fontSize: "18px", fontWeight: 700, margin: 0 }}>Criar Novo Grupo</h3>
+              <button onClick={() => setShowNewGroupModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#888" }}><X size={18} /></button>
+            </div>
+            <form onSubmit={handleCreateGroup}>
+              <Field label="Nome do Grupo">
+                <input
+                  style={inputStyle}
+                  placeholder="Ex: Time de Operações / Projeto X"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  required
+                />
+              </Field>
+
+              <Field label="Selecione os Participantes">
+                <div style={{ maxHeight: "200px", overflowY: "auto", border: `1px solid ${LINE}`, borderRadius: "8px", padding: "8px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {otherUsers.map((u) => {
+                    const isChecked = selectedGroupMembers.includes(u.id);
+                    return (
+                      <label key={u.id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "6px 8px", borderRadius: "6px", cursor: "pointer", background: isChecked ? "#FFF4ED" : "transparent" }}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedGroupMembers([...selectedGroupMembers, u.id]);
+                            } else {
+                              setSelectedGroupMembers(selectedGroupMembers.filter((id) => id !== u.id));
+                            }
+                          }}
+                        />
+                        <div style={{ width: "26px", height: "26px", borderRadius: "50%", background: GOL_ORANGE, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "11px", fontWeight: 700, flexShrink: 0 }}>
+                          {u.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span style={{ fontSize: "13px", fontWeight: 500 }}>{u.name} ({u.role})</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </Field>
+
+              <Button type="submit" style={{ marginTop: "12px", width: "100%" }}>
+                Criar Grupo de Conversa
+              </Button>
+            </form>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
 /*  App shell                                                              */
 /* ---------------------------------------------------------------------- */
 export default function App() {
@@ -1972,8 +2406,8 @@ export default function App() {
   const navItems = useMemo(() => {
     const role = (currentUser?.role || "").toLowerCase();
     const base = [
-      { id: "dashboard", label: "Painel", icon: LayoutDashboard }, { id: "colaboradores", label: "Colaboradores", icon: Users },
-      { id: "feedbacks", label: "Feedbacks", icon: MessageSquareText },
+      { id: "colaboradores", label: role === "colaborador" ? "Colegas de Equipe" : "Colaboradores", icon: Users },
+      { id: "chat", label: "Mensagens", icon: MessageCircleIcon },
       { id: "agenda", label: "Agenda", icon: CalendarClock },
     ];
     if (role === "gestor" || role === "admin") {
@@ -2163,6 +2597,9 @@ export default function App() {
           )}
           {page === "configuracoes" && (
             <ConfiguracoesPage user={currentUser} onUpdateUser={(u) => setCurrentUser(u)} />
+          )}
+          {page === "chat" && (
+            <ChatPage user={currentUser} users={users} />
           )}
         </div>
       </div>
