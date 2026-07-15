@@ -594,18 +594,18 @@ function StatCard({ label, value, accent }) {
 }
 
 function Dashboard({ user, users, feedbacks, agenda, discResults, goTo }) {
-  const isGestor = user.role === "gestor";
-  const equipe = users.filter((u) => u.gestorId === user.id);
-  const meusFeedbacks = feedbacks.filter((f) => f.autorId === user.id || f.destinatarioId === user.id);
-  const proximos = agenda
-    .filter((a) => (isGestor ? a.gestorId === user.id : a.colaboradorId === user.id) && a.status === "Agendado")
-    .sort((a, b) => (a.data + a.hora).localeCompare(b.data + b.hora))
-    .slice(0, 4);
+  const isAdmin = user?.role === "admin";
+  const isGestor = user?.role === "gestor" || user?.role === "admin";
+  const userId = user?.id || "";
+        {isAdmin ? "Painel Administrativo" : ("Ola, " + firstName)}
 
-  return (
-    <div>
-      <h2 style={{ fontFamily: "Inter, sans-serif", fontSize: "26px", fontWeight: 800, margin: "0 0 4px 0" }}>
-        {isAdmin ? "Painel Administrativo" : ("Ola, " + user.name.split(" ")[0])}
+  const equipe = isAdmin ? users.filter((u) => u.role === "colaborador") : users.filter((u) => u.gestorId === userId);
+  const meusFeedbacks = isAdmin ? feedbacks : feedbacks.filter((f) => f.autorId === userId || f.destinatarioId === userId);
+  const proximos = agenda
+    .filter((a) => (isAdmin ? true : isGestor ? a.gestorId === userId : a.colaboradorId === userId) && a.status === "Agendado")
+    .sort((a, b) => ((a.data || "") + (a.hora || "")).localeCompare((b.data || "") + (b.hora || "")))
+    .slice(0, 4);
+        {isAdmin ? "Painel Administrativo" : ("Ola, " + firstName)}
       </h2>
       <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 22px 0" }}>
         {isAdmin ? "Visao completa de toda a empresa." : isGestor ? "Panorama da sua equipe hoje." : "Seu panorama de desenvolvimento."}
@@ -676,7 +676,7 @@ function Dashboard({ user, users, feedbacks, agenda, discResults, goTo }) {
               .sort((a, b) => b.criadoEm - a.criadoEm)
               .slice(0, 4)
               .map((f) => {
-                const tipo = FEEDBACK_TIPOS.find((t) => t.id === f.tipo);
+                const tipo = FEEDBACK_TIPOS.find((t) => t.id === f.tipo) || FEEDBACK_TIPOS[0];
                 return (
                   <div key={f.id} style={{ padding: "10px 0", borderBottom: `1px solid ${LINE}` }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
@@ -1610,24 +1610,30 @@ export default function App() {
       });
 
       // Escuta mudanças de autenticação do Firebase
-      const unsubAuth = onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          // Busca o doc de dados complementares do usuário
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            const loggedUser = { id: user.uid, ...userDoc.data() };
-            setCurrentUser(loggedUser);
-            localStorage.setItem("disc_currentUser", JSON.stringify(loggedUser));
+              let unsubUserDoc = null;
+        const unsubAuth = onAuthStateChanged(auth, (user) => {
+          if (user) {
+            unsubUserDoc = onSnapshot(doc(db, "users", user.uid), (userSnap) => {
+              if (userSnap.exists()) {
+                const loggedUser = { id: user.uid, ...userSnap.data() };
+                setCurrentUser(loggedUser);
+                localStorage.setItem("disc_currentUser", JSON.stringify(loggedUser));
+              } else {
+                setCurrentUser({ id: user.uid, email: user.email, name: user.email.split("@")[0], role: "colaborador" });
+              }
+              setLoading(false);
+            }, (err) => {
+              console.warn("User doc sync error:", err);
+              setCurrentUser({ id: user.uid, email: user.email, name: user.email.split("@")[0], role: "colaborador" });
+              setLoading(false);
+            });
           } else {
-            // Em cenários de descontinuidade de dados complementares
-            setCurrentUser({ id: user.uid, email: user.email, name: user.email.split("@")[0], role: "colaborador" });
+            if (unsubUserDoc) unsubUserDoc();
+            setCurrentUser(null);
+            localStorage.removeItem("disc_currentUser");
+            setLoading(false);
           }
-        } else {
-          setCurrentUser(null);
-          localStorage.removeItem("disc_currentUser");
-        }
-        setLoading(false);
-      });
+        });
 
       return () => {
         unsubUsers();
