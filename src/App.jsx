@@ -1666,7 +1666,7 @@ function ConfiguracoesPage({ user, onUpdateUser }) {
     e.preventDefault();
     setMsg({ text: "", type: "" });
     if (newPassword && newPassword !== confirmPassword) {
-      setMsg({ text: "As senhas nao coincidem. Verifique e digite novamente.", type: "error" });
+      setMsg({ text: "As senhas não coincidem. Verifique e digite novamente.", type: "error" });
       return;
     }
     setSaving(true);
@@ -1685,18 +1685,35 @@ function ConfiguracoesPage({ user, onUpdateUser }) {
             await updateProfile(auth.currentUser, { displayName: nome.trim() });
           }
         } catch (e) { console.warn("Auth profile sync notice:", e); }
+
+        try {
+          if (email.trim().toLowerCase() !== (user?.email || "").toLowerCase()) {
+            await updateEmail(auth.currentUser, email.trim().toLowerCase());
+          }
+        } catch (e) {
+          if (e?.code === "auth/requires-recent-login") throw e;
+          console.warn("email update sync notice:", e);
         }
+
+        try {
+          if (newPassword) {
+            await updatePassword(auth.currentUser, newPassword);
+          }
+        } catch (e) {
+          if (e?.code === "auth/requires-recent-login") throw e;
+          console.warn("password update sync notice:", e);
+        }
+
         await updateDoc(doc(db, "users", user.id), updates);
-      } else {
-        onUpdateUser({ ...user, ...updates });
       }
-      setMsg({ text: "Configuracoes salvas com sucesso!", type: "success" });
+      onUpdateUser({ ...user, ...updates });
+      setMsg({ text: "Configurações salvas com sucesso!", type: "success" });
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
       console.error(err);
-      if (err.code === "auth/requires-recent-login") {
-        setMsg({ text: "Por razoes de seguranca, para alterar e-mail ou senha e necessario que voce faca login novamente.", type: "error" });
+      if (err?.code === "auth/requires-recent-login") {
+        setMsg({ text: "Por razões de segurança, para alterar e-mail ou senha é necessário que você faça login novamente.", type: "error" });
       } else {
         setMsg({ text: "Erro ao salvar: " + err.message, type: "error" });
       }
@@ -1704,7 +1721,6 @@ function ConfiguracoesPage({ user, onUpdateUser }) {
       setSaving(false);
     }
   };
-
   const bullets = "••••••••";
 
   return (
