@@ -754,55 +754,164 @@ function Dashboard({ user, users, feedbacks, agenda, discResults, goTo }) {
 /* ---------------------------------------------------------------------- */
 /*  Colaboradores (gestor)                                                 */
 /* ---------------------------------------------------------------------- */
-function ColaboradoresPage({ user, users, discResults }) {
+function ColaboradoresPage({ user, users, discResults, feedbacks = [], agenda = [] }) {
+  const [selectedColab, setSelectedColab] = useState(null);
   const isAdmin = user?.role === "admin";
   const isGestor = user?.role === "gestor";
   const isColaborador = user?.role === "colaborador";
   const meuGestor = users.find((u) => u.id === user?.gestorId);
-  const equipe = isAdmin ? users.filter((u) => u.role === "colaborador") : isGestor ? users.filter((u) => u.gestorId === user?.id) : users.filter((u) => u.gestorId === user?.gestorId && u.id !== user?.id);
+
+  const equipe = isAdmin
+    ? users.filter((u) => u.role === "colaborador")
+    : isGestor
+    ? users.filter((u) => u.gestorId === user?.id)
+    : users.filter((u) => u.gestorId === user?.gestorId && u.id !== user?.id);
+
   return (
     <div>
-      <h2 style={{ fontFamily: "Fraunces, serif", fontSize: "26px", fontWeight: 600, margin: "0 0 4px 0" }}>{isColaborador ? "Meus Colegas de Equipe" : "Colaboradores"}</h2>
-      <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 22px 0" }}>{isColaborador ? (meuGestor ? ("Colegas de equipe sob a liderança de " + meuGestor.name + ".") : "Colegas de equipe do seu time.") : "Sua equipe e o perfil comportamental de cada pessoa."}</p>
+      <h2 style={{ fontFamily: "Fraunces, serif", fontSize: "26px", fontWeight: 600, margin: "0 0 4px 0" }}>
+        {isColaborador ? "Meus Colegas de Equipe" : "Colaboradores"}
+      </h2>
+      <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 22px 0" }}>
+        {isColaborador
+          ? meuGestor
+            ? `Colegas de equipe sob a liderança de ${meuGestor.name}.`
+            : "Colegas de equipe do seu time."
+          : "Sua equipe e o perfil comportamental de cada pessoa."}
+      </p>
+
       {equipe.length === 0 ? (
         <Card style={{ padding: "28px", textAlign: "center", color: NAVY_SOFT }}>
-          {isColaborador ? "Você ainda não possui colegas cadastrados na equipe do mesmo gestor." : "Ainda não há colaboradores vinculados a você."}
+          {isColaborador
+            ? "Você ainda não possui colegas cadastrados na equipe do mesmo gestor."
+            : "Ainda não há colaboradores vinculados a você."}
         </Card>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "14px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
           {equipe.map((c) => {
             const res = discResults[c.id];
             return (
-              <Card key={c.id} style={{ padding: "18px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-                  <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: GOL_ORANGE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden", border: c.photoURL ? `1.5px solid ${GOL_ORANGE}` : "none" }}>{c.photoURL ? <img src={c.photoURL} alt="Foto" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ color: "#fff", fontWeight: 700, fontSize: "14px" }}>{c.name.charAt(0).toUpperCase()}</span>}</div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: "15px" }}>{c.name}</div>
-                    <div style={{ fontSize: "12px", color: NAVY_SOFT }}>@{c.username}</div>
-                  </div>
-                </div>
-                {res ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <MiniCompass scores={res.resultado} />
-                    <div>
-                      <Badge color={DISC_INFO[res.dominante].cor}>{res.dominante} · {DISC_INFO[res.dominante].nome}</Badge>
-                      <p style={{ fontSize: "12px", color: NAVY_SOFT, margin: "8px 0 0 0", lineHeight: 1.4 }}>{DISC_INFO[res.dominante].desc}</p>
+              <Card key={c.id} style={{ padding: "20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
+                    <div style={{
+                      width: "42px",
+                      height: "42px",
+                      borderRadius: "50%",
+                      background: GOL_ORANGE,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      overflow: "hidden",
+                      border: c.photoURL ? `2px solid ${GOL_ORANGE}` : "none",
+                    }}>
+                      {c.photoURL ? (
+                        <img src={c.photoURL} alt="Foto" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <span style={{ color: "#fff", fontWeight: 700, fontSize: "16px" }}>
+                          {c.name.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ overflow: "hidden" }}>
+                      <div style={{ fontWeight: 700, fontSize: "15px", color: INK, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name}</div>
+                      <div style={{ fontSize: "12px", color: NAVY_SOFT }}>@{c.username || c.email}</div>
                     </div>
                   </div>
-                ) : (
-                  <p style={{ fontSize: "12.5px", color: "#B23A2E", margin: 0 }}>Ainda não fez o teste DISC.</p>
-                )}
+
+                  {res ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
+                      <MiniCompass scores={res.resultado} />
+                      <div>
+                        <Badge color={DISC_INFO[res.dominante].cor}>
+                          {res.dominante} — {DISC_INFO[res.dominante].nome}
+                        </Badge>
+                        <p style={{ fontSize: "12px", color: NAVY_SOFT, margin: "6px 0 0 0", lineHeight: 1.4 }}>
+                          {DISC_INFO[res.dominante].desc}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ padding: "10px 12px", borderRadius: "8px", background: "#FFF5F0", color: "#B23A2E", fontSize: "12.5px", marginBottom: "14px" }}>
+                      Ainda não realizou o teste DISC.
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  onClick={() => setSelectedColab(c)}
+                  style={{ width: "100%", marginTop: "10px", fontSize: "13px", padding: "8px 12px" }}
+                >
+                  Visão Geral do Perfil
+                </Button>
               </Card>
             );
           })}
         </div>
       )}
+
+      {selectedColab && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: "20px" }}>
+          <Card style={{ width: "100%", maxWidth: "560px", maxHeight: "90vh", overflowY: "auto", padding: "28px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                <div style={{
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "50%",
+                  background: GOL_ORANGE,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  fontWeight: 800,
+                  fontSize: "22px",
+                  overflow: "hidden",
+                  border: selectedColab.photoURL ? `2px solid ${GOL_ORANGE}` : "none",
+                }}>
+                  {selectedColab.photoURL ? (
+                    <img src={selectedColab.photoURL} alt="Foto" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    selectedColab.name.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div>
+                  <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0, color: INK }}>{selectedColab.name}</h3>
+                  <div style={{ fontSize: "13px", color: NAVY_SOFT, marginTop: "2px" }}>{selectedColab.email} — <span style={{ textTransform: "uppercase", fontWeight: 700 }}>{selectedColab.role}</span></div>
+                </div>
+              </div>
+              <button onClick={() => setSelectedColab(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#888" }}><X size={20} /></button>
+            </div>
+
+            <div style={{ padding: "16px", borderRadius: "12px", background: "#FAFBFD", border: `1px solid ${LINE}`, marginBottom: "20px" }}>
+              <div style={{ fontWeight: 700, fontSize: "14px", color: INK, marginBottom: "10px" }}>Visão Geral do Perfil DISC</div>
+              {discResults[selectedColab.id] ? (
+                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                  <Compass scores={discResults[selectedColab.id].resultado} size={140} />
+                  <div style={{ flex: 1 }}>
+                    <Badge color={DISC_INFO[discResults[selectedColab.id].dominante].cor}>
+                      Perfil Dominante: {discResults[selectedColab.id].dominante} — {DISC_INFO[discResults[selectedColab.id].dominante].nome}
+                    </Badge>
+                    <p style={{ fontSize: "12.5px", color: "#555", marginTop: "8px", lineHeight: 1.5 }}>
+                      {DISC_INFO[discResults[selectedColab.id].dominante].desc}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ color: NAVY_SOFT, fontSize: "13px" }}>Este colaborador ainda não respondeu ao formulário DISC.</div>
+              )}
+            </div>
+
+            <Button onClick={() => setSelectedColab(null)} style={{ width: "100%" }}>
+              Fechar Visão Geral
+            </Button>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
-/* ---------------------------------------------------------------------- */
-/*  Gestores (admin)                                                       */
-/* ---------------------------------------------------------------------- */
 function GestoresPage({ users, discResults, feedbacks }) {
   const gestores = (users || []).filter((u) => u && u.role === "gestor");
   return (
