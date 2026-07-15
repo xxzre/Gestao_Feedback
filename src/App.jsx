@@ -717,7 +717,7 @@ function ColaboradoresPage({ user, users, discResults }) {
             return (
               <Card key={c.id} style={{ padding: "18px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-                  <UserCircle2 size={30} color={NAVY_SOFT} />
+                  <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: c.photoURL ? `url(${c.photoURL}) center/cover` : GOL_ORANGE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: c.photoURL ? `1.5px solid ${GOL_ORANGE}` : "none" }}>{!c.photoURL && <span style={{ color: "#fff", fontWeight: 700, fontSize: "14px" }}>{c.name.charAt(0).toUpperCase()}</span>}</div>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: "15px" }}>{c.name}</div>
                     <div style={{ fontSize: "12px", color: NAVY_SOFT }}>@{c.username}</div>
@@ -768,7 +768,7 @@ function GestoresPage({ users, discResults, feedbacks }) {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: equipe.length > 0 ? "16px" : "0" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "linear-gradient(135deg, #FF6F1F, #D95A10)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <span style={{ color: "#fff", fontWeight: 700, fontSize: "15px" }}>{g.name.charAt(0).toUpperCase()}</span>
+                      {g.photoURL ? <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: `url(${g.photoURL}) center/cover` }} /> : <span style={{ color: "#fff", fontWeight: 700, fontSize: "15px" }}>{g.name.charAt(0).toUpperCase()}</span>}
                     </div>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: "15px" }}>{g.name}</div>
@@ -786,7 +786,7 @@ function GestoresPage({ users, discResults, feedbacks }) {
                       const res = discResults[col.id];
                       return (
                         <div key={col.id} style={{ background: "#F8F8F8", borderRadius: "8px", padding: "10px 12px", display: "flex", alignItems: "center", gap: "8px" }}>
-                          <UserCircle2 size={20} color="#888" />
+                          <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: col.photoURL ? `url(${col.photoURL}) center/cover` : GOL_ORANGE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{!col.photoURL && <span style={{ color: "#fff", fontWeight: 700, fontSize: "10px" }}>{col.name.charAt(0).toUpperCase()}</span>}</div>
                           <div>
                             <div style={{ fontSize: "13px", fontWeight: 600 }}>{col.name}</div>
                             {res && <Badge color={DISC_INFO[res.dominante].cor}>{res.dominante}</Badge>}
@@ -1577,6 +1577,184 @@ function DiscPage({ user, discResult, onSave }) {
 }
 
 /* ---------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------- */
+/*  ConfiguracoesPage                                                      */
+/* ---------------------------------------------------------------------- */
+function ConfiguracoesPage({ user, onUpdateUser }) {
+  const [nome, setNome] = useState(user?.name || "");
+  const [email, setEmail] = useState(user?.email || user?.username || "");
+  const [photoURL, setPhotoURL] = useState(user?.photoURL || "");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState({ text: "", type: "" });
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        setMsg({ text: "A imagem deve ter no maximo 2MB.", type: "error" });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoURL(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setMsg({ text: "", type: "" });
+    if (newPassword && newPassword !== confirmPassword) {
+      setMsg({ text: "As senhas nao coincidem. Verifique e digite novamente.", type: "error" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const updates = {
+        name: nome.trim(),
+        email: email.trim().toLowerCase(),
+        photoURL,
+      };
+      if (isFirebaseConfigured && auth.currentUser) {
+        if (nome.trim() !== (user?.name || "") || photoURL !== (user?.photoURL || "")) {
+          await updateProfile(auth.currentUser, { displayName: nome.trim(), photoURL });
+        }
+        if (email.trim().toLowerCase() !== (user?.email || "").toLowerCase()) {
+          await updateEmail(auth.currentUser, email.trim().toLowerCase());
+        }
+        if (newPassword) {
+          await updatePassword(auth.currentUser, newPassword);
+        }
+        await updateDoc(doc(db, "users", user.id), updates);
+      } else {
+        onUpdateUser({ ...user, ...updates });
+      }
+      setMsg({ text: "Configuracoes salvas com sucesso!", type: "success" });
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      console.error(err);
+      if (err.code === "auth/requires-recent-login") {
+        setMsg({ text: "Por razoes de seguranca, para alterar e-mail ou senha e necessario que voce faca login novamente.", type: "error" });
+      } else {
+        setMsg({ text: "Erro ao salvar: " + err.message, type: "error" });
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const bullets = "••••••••";
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "4px" }}>
+        <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "linear-gradient(135deg, #FF6F1F, #D95A10)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Settings size={18} color="#fff" />
+        </div>
+        <h2 style={{ fontFamily: "Inter, sans-serif", fontSize: "24px", fontWeight: 800, margin: 0 }}>Minhas Configuracoes</h2>
+      </div>
+      <p style={{ color: "#888", fontSize: "14px", margin: "0 0 24px 0" }}>Gerencie seus dados pessoais, foto de perfil e credenciais de acesso.</p>
+
+      <Card style={{ padding: "28px", maxWidth: "600px" }}>
+        <form onSubmit={handleSave}>
+          <div style={{ display: "flex", alignItems: "center", gap: "20px", marginBottom: "24px", paddingBottom: "20px", borderBottom: `1px solid ${LINE}` }}>
+            <div style={{ position: "relative" }}>
+              <div style={{
+                width: "80px",
+                height: "80px",
+                borderRadius: "50%",
+                background: photoURL ? `url(${photoURL}) center/cover` : GOL_ORANGE,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontWeight: 800,
+                fontSize: "28px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                border: `3px solid ${GOL_ORANGE}`,
+              }}>
+                {!photoURL && (nome ? nome.charAt(0).toUpperCase() : "U")}
+              </div>
+              <label style={{
+                position: "absolute",
+                bottom: "-2px",
+                right: "-2px",
+                background: GOL_DARK,
+                color: "#fff",
+                borderRadius: "50%",
+                width: "28px",
+                height: "28px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+              }}>
+                <Camera size={14} />
+                <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
+              </label>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "15px", color: INK }}>Foto de Perfil</div>
+              <div style={{ fontSize: "12.5px", color: NAVY_SOFT, marginTop: "2px" }}>
+                Visivel para todos os colaboradores, gestores e admins.
+              </div>
+              {photoURL && (
+                <button type="button" onClick={() => setPhotoURL("")} style={{ background: "none", border: "none", color: "#E53935", fontSize: "12px", cursor: "pointer", padding: 0, marginTop: "6px" }}>
+                  Remover foto
+                </button>
+              )}
+            </div>
+          </div>
+
+          <Field label="Nome completo">
+            <input style={inputStyle} value={nome} onChange={(e) => setNome(e.target.value)} required />
+          </Field>
+
+          <Field label="E-mail de acesso">
+            <input style={inputStyle} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </Field>
+
+          <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: `1px solid ${LINE}` }}>
+            <h3 style={{ fontSize: "15px", fontWeight: 700, margin: "0 0 14px 0", color: INK }}>Alterar Senha (Opcional)</h3>
+            <Field label="Nova Senha">
+              <div style={{ position: "relative" }}>
+                <input type={showPassword ? "text" : "password"} style={{ ...inputStyle, paddingRight: "40px" }} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={bullets} />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#888", display: "flex", alignItems: "center", justifyContent: "center", padding: "4px" }}>
+                  {showPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+                </button>
+              </div>
+            </Field>
+            <Field label="Confirmar Nova Senha">
+              <div style={{ position: "relative" }}>
+                <input type={showConfirmPassword ? "text" : "password"} style={{ ...inputStyle, paddingRight: "40px" }} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder={bullets} />
+                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#888", display: "flex", alignItems: "center", justifyContent: "center", padding: "4px" }}>
+                  {showConfirmPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+                </button>
+              </div>
+            </Field>
+          </div>
+
+          {msg.text && (
+            <div style={{ padding: "12px 14px", borderRadius: "8px", fontSize: "13px", marginBottom: "16px", background: msg.type === "success" ? "#F0FAF5" : "#FFF5F0", color: msg.type === "success" ? "#3F7A5E" : "#E53935", border: `1px solid ${msg.type === "success" ? "#3F7A5E44" : "#E5393544"}` }}>
+              {msg.text}
+            </div>
+          )}
+
+          <Button type="submit" disabled={saving} style={{ marginTop: "8px" }}>
+            <Sparkles size={16} /> {saving ? "Salvando..." : "Salvar alteracoes"}
+          </Button>
+        </form>
+      </Card>
+    </div>
+  );
+}
 /*  App shell                                                              */
 /* ---------------------------------------------------------------------- */
 export default function App() {
@@ -1738,6 +1916,7 @@ export default function App() {
     if (role === "colaborador") {
       base.push({ id: "disc", label: "Teste DISC", icon: CompassIcon });
     }
+    base.push({ id: "configuracoes", label: "Configuracoes", icon: Settings });
     return base;
   }, [currentUser]);
 
@@ -1903,6 +2082,9 @@ export default function App() {
           )}
           {page === "guiaDisc" && (currentUser?.role === "gestor" || currentUser?.role === "admin") && (
             <GuiaDiscPage />
+          )}
+          {page === "configuracoes" && (
+            <ConfiguracoesPage user={currentUser} onUpdateUser={(u) => setCurrentUser(u)} />
           )}
         </div>
       </div>
