@@ -490,7 +490,11 @@ function AuthScreen({ users, onLogin, onRegister }) {
                 }}
               >
                 {m === "login" ? "Entrar" : "Criar conta"}
-              {mode === "login" ? (
+              </button>
+            ))}
+          </div>
+
+          {mode === "login" ? (
             <form onSubmit={handleLogin}>
               <Field label="E-mail">
                 <input style={inputStyle} value={username} onChange={(e) => setUsername(e.target.value)} autoFocus placeholder="seu@email.com" />
@@ -513,8 +517,6 @@ function AuthScreen({ users, onLogin, onRegister }) {
               </Field>
               <Field label="Senha">
                 <input type="password" style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
-              </Field>
-              {gestores.length > 0 && (�•••••••" />
               </Field>
               {gestores.length > 0 && (
                 <Field label="Papel">
