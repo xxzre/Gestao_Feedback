@@ -632,7 +632,6 @@ function Dashboard({ user, users, feedbacks, agenda, discResults, goTo }) {
           </>
         )}
       </div>
-      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "16px" }} className="dash-grid">
         <Card style={{ padding: "20px" }}>
