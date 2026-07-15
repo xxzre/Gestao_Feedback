@@ -33,6 +33,9 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  updateProfile,
+  updateEmail,
+  updatePassword,
 } from "firebase/auth";
 import { db, isFirebaseConfigured, auth } from "./firebase";
 
