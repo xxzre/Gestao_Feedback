@@ -1726,16 +1726,22 @@ export default function App() {
   };
 
   const navItems = useMemo(() => {
+    const role = (currentUser?.role || "").toLowerCase();
     const base = [
       { id: "dashboard", label: "Painel", icon: LayoutDashboard },
       { id: "feedbacks", label: "Feedbacks", icon: MessageSquareText },
       { id: "agenda", label: "Agenda", icon: CalendarClock },
     ];
-    if (currentUser?.role === "gestor") {
+    if (role === "gestor" || role === "admin") {
       base.splice(1, 0, { id: "colaboradores", label: "Colaboradores", icon: Users });
+      if (role === "admin") {
+        base.splice(2, 0, { id: "gestores", label: "Gestores", icon: ShieldCheck });
+      }
       base.push({ id: "guiaDisc", label: "Como Lidar (DISC)", icon: BookOpen });
     }
-    if (currentUser?.role === "colaborador") base.push({ id: "disc", label: "Teste DISC", icon: CompassIcon });
+    if (role === "colaborador") {
+      base.push({ id: "disc", label: "Teste DISC", icon: CompassIcon });
+    }
     return base;
   }, [currentUser]);
 
