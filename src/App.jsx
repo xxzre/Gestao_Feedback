@@ -1997,7 +1997,7 @@ function ChatPage({ user, users }) {
     const otherId = chat.participantes.find((id) => id !== user.id);
     const info = chat.participantesInfo ? chat.participantesInfo[otherId] : null;
     const uObj = users.find((x) => x.id === otherId);
-    const name = info?.name || uObj?.name || "Usuario";
+    const nome = info?.name || uObj?.name || "Usuario";
     const photoURL = info?.photoURL || uObj?.photoURL || "";
     const role = (info?.role || uObj?.role || "").toUpperCase();
     return { nome, photoURL, badge: role };
