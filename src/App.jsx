@@ -754,15 +754,18 @@ function Dashboard({ user, users, feedbacks, agenda, discResults, goTo }) {
 /*  Colaboradores (gestor)                                                 */
 /* ---------------------------------------------------------------------- */
 function ColaboradoresPage({ user, users, discResults }) {
-  const isAdmin = user.role === "admin";
-  const equipe = isAdmin ? users.filter((u) => u.role === "colaborador") : users.filter((u) => u.gestorId === user.id);
+  const isAdmin = user?.role === "admin";
+  const isGestor = user?.role === "gestor";
+  const isColaborador = user?.role === "colaborador";
+  const meuGestor = users.find((u) => u.id === user?.gestorId);
+  const equipe = isAdmin ? users.filter((u) => u.role === "colaborador") : isGestor ? users.filter((u) => u.gestorId === user?.id) : users.filter((u) => u.gestorId === user?.gestorId && u.id !== user?.id);
   return (
     <div>
-      <h2 style={{ fontFamily: "Fraunces, serif", fontSize: "26px", fontWeight: 600, margin: "0 0 4px 0" }}>Colaboradores</h2>
-      <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 22px 0" }}>Sua equipe e o perfil comportamental de cada pessoa.</p>
+      <h2 style={{ fontFamily: "Fraunces, serif", fontSize: "26px", fontWeight: 600, margin: "0 0 4px 0" }}>{isColaborador ? "Meus Colegas de Equipe" : "Colaboradores"}</h2>
+      <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 22px 0" }}>{isColaborador ? (meuGestor ? ("Colegas de equipe sob a liderança de " + meuGestor.name + ".") : "Colegas de equipe do seu time.") : "Sua equipe e o perfil comportamental de cada pessoa."}</p>
       {equipe.length === 0 ? (
         <Card style={{ padding: "28px", textAlign: "center", color: NAVY_SOFT }}>
-          Ainda não há colaboradores vinculados a você. Peça para eles se cadastrarem escolhendo você como gestor.
+          {isColaborador ? "Você ainda não possui colegas cadastrados na equipe do mesmo gestor." : "Ainda não há colaboradores vinculados a você."}
         </Card>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "14px" }}>
@@ -771,7 +774,7 @@ function ColaboradoresPage({ user, users, discResults }) {
             return (
               <Card key={c.id} style={{ padding: "18px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-                  <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: c.photoURL ? `url(${c.photoURL}) center/cover` : GOL_ORANGE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: c.photoURL ? `1.5px solid ${GOL_ORANGE}` : "none" }}>{!c.photoURL && <span style={{ color: "#fff", fontWeight: 700, fontSize: "14px" }}>{c.name.charAt(0).toUpperCase()}</span>}</div>
+                  <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: GOL_ORANGE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden", border: c.photoURL ? `1.5px solid ${GOL_ORANGE}` : "none" }}>{c.photoURL ? <img src={c.photoURL} alt="Foto" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ color: "#fff", fontWeight: 700, fontSize: "14px" }}>{c.name.charAt(0).toUpperCase()}</span>}</div>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: "15px" }}>{c.name}</div>
                     <div style={{ fontSize: "12px", color: NAVY_SOFT }}>@{c.username}</div>
@@ -1969,12 +1972,12 @@ export default function App() {
   const navItems = useMemo(() => {
     const role = (currentUser?.role || "").toLowerCase();
     const base = [
-      { id: "dashboard", label: "Painel", icon: LayoutDashboard },
+      { id: "dashboard", label: "Painel", icon: LayoutDashboard }, { id: "colaboradores", label: "Colaboradores", icon: Users },
       { id: "feedbacks", label: "Feedbacks", icon: MessageSquareText },
       { id: "agenda", label: "Agenda", icon: CalendarClock },
     ];
     if (role === "gestor" || role === "admin") {
-      base.splice(1, 0, { id: "colaboradores", label: "Colaboradores", icon: Users });
+      // colaboradores added by default in base array
       if (role === "admin") {
         base.splice(2, 0, { id: "gestores", label: "Gestores", icon: ShieldCheck });
       }
@@ -2140,7 +2143,7 @@ export default function App() {
           {page === "dashboard" && (
             <Dashboard user={currentUser} users={users} feedbacks={feedbacks} agenda={agenda} discResults={discResults} goTo={setPage} />
           )}
-          {page === "colaboradores" && (currentUser?.role === "gestor" || currentUser?.role === "admin") && (
+          {page === "colaboradores" && (
             <ColaboradoresPage user={currentUser} users={users} discResults={discResults} />
           )}
           {page === "gestores" && currentUser?.role === "admin" && (
