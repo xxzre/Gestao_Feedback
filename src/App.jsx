@@ -27,6 +27,8 @@ import {
   getDoc,
   updateDoc,
   onSnapshot,
+  query,
+  where,
 } from "firebase/firestore";
 import {
   createUserWithEmailAndPassword,
@@ -1858,7 +1860,7 @@ function ChatPage({ user, users }) {
 
   useEffect(() => {
     if (!isFirebaseConfigured || !user?.id) return;
-    const q = collection(db, "chats");
+    const q = query(collection(db, "chats"), where("participantes", "array-contains", user.id));
     const unsub = onSnapshot(q, (snap) => {
       const list = [];
       snap.forEach((docSnap) => {
