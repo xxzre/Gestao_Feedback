@@ -86,6 +86,24 @@ const FEEDBACK_TIPOS = [
 
 /* ---------------------------------------------------------------------- */
 /*  Helpers                                                                */
+function SettingsIcon({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function CameraIcon({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+      <circle cx="12" cy="13" r="3" />
+    </svg>
+  );
+}
+
 function EyeIcon({ size = 18 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1655,7 +1673,7 @@ function ConfiguracoesPage({ user, onUpdateUser }) {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "4px" }}>
         <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "linear-gradient(135deg, #FF6F1F, #D95A10)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Settings size={18} color="#fff" />
+          <SettingsIcon size={18} color="#fff" />
         </div>
         <h2 style={{ fontFamily: "Inter, sans-serif", fontSize: "24px", fontWeight: 800, margin: 0 }}>Minhas Configuracoes</h2>
       </div>
@@ -1696,7 +1714,7 @@ function ConfiguracoesPage({ user, onUpdateUser }) {
                 cursor: "pointer",
                 boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
               }}>
-                <Camera size={14} />
+                <CameraIcon size={14} />
                 <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
               </label>
             </div>
@@ -1916,7 +1934,7 @@ export default function App() {
     if (role === "colaborador") {
       base.push({ id: "disc", label: "Teste DISC", icon: CompassIcon });
     }
-    base.push({ id: "configuracoes", label: "Configuracoes", icon: Settings });
+    base.push({ id: "configuracoes", label: "Configuracoes", icon: SettingsIcon });
     return base;
   }, [currentUser]);
 
