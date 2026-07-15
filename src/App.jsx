@@ -302,6 +302,9 @@ function AuthScreen({ users, onLogin, onRegister }) {
   const [error, setError] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [nome, setNome] = useState("");
   const [role, setRole] = useState("colaborador");
   const [gestorId, setGestorId] = useState("");
@@ -312,23 +315,22 @@ function AuthScreen({ users, onLogin, onRegister }) {
     e.preventDefault();
     const email = username.trim().toLowerCase();
     if (!email || !password) {
-      setError("Preencha usuário/e-mail e senha.");
+      setError("Preencha e-mail e senha.");
       return;
     }
     setError("");
     
     if (isFirebaseConfigured) {
       try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        // O onAuthStateChanged tratará o set do currentUser
+        await signInWithEmailAndPassword(auth, email, password);
       } catch (err) {
         console.error(err);
-        setError("Erro ao entrar: " + (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password" ? "Usuário ou senha incorretos." : err.message));
+        setError("Erro ao entrar: " + (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password" ? "E-mail ou senha incorretos." : err.message));
       }
     } else {
       const u = users.find((x) => x.username === email);
       if (!u || u.password !== password) {
-        setError("Usuário ou senha incorretos.");
+        setError("E-mail ou senha incorretos.");
         return;
       }
       onLogin(u);
@@ -338,8 +340,12 @@ function AuthScreen({ users, onLogin, onRegister }) {
   const handleRegister = async (e) => {
     e.preventDefault();
     const email = username.trim().toLowerCase();
-    if (!email || !password || !nome.trim()) {
-      setError("Preencha nome, usuário/e-mail e senha.");
+    if (!email || !password || !confirmPassword || !nome.trim()) {
+      setError("Preencha todos os campos obrigatórios.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("As senhas não coincidem. Verifique e digite novamente.");
       return;
     }
     if (isFirebaseConfigured && !email.includes("@")) {
@@ -362,7 +368,6 @@ function AuthScreen({ users, onLogin, onRegister }) {
           role: gestores.length === 0 ? "gestor" : role,
           gestorId: role === "colaborador" ? gestorId : null,
         };
-        // Salva dados adicionais no Firestore sem a senha
         await setDoc(doc(db, "users", uid), novo);
       } catch (err) {
         console.error(err);
@@ -370,7 +375,7 @@ function AuthScreen({ users, onLogin, onRegister }) {
       }
     } else {
       if (users.some((x) => x.username === email)) {
-        setError("Esse usuário já existe.");
+        setError("Esse e-mail já existe.");
         return;
       }
       const novo = {
@@ -385,59 +390,27 @@ function AuthScreen({ users, onLogin, onRegister }) {
     }
   };
 
+  const bullets = String.fromCharCode(0x2022).repeat(8);
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        fontFamily: "Inter, sans-serif",
-        color: INK,
-      }}
-    >
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        * { box-sizing: border-box; }
-        input:focus, select:focus { border-color: ${GOL_ORANGE} !important; box-shadow: 0 0 0 3px ${GOL_ORANGE}22 !important; }
-      `}</style>
-
-      {/* LEFT PANEL – Branding */}
-      <div style={{
-        flex: "0 0 42%",
-        background: GOL_SIDEBAR,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        padding: "48px 48px 40px",
-        position: "relative",
-        overflow: "hidden",
-      }}>
-        {/* Decorative circles */}
-        <div style={{ position: "absolute", top: "-80px", right: "-80px", width: "340px", height: "340px", borderRadius: "50%", background: `${GOL_ORANGE}18`, pointerEvents: "none" }} />
-        <div style={{ position: "absolute", bottom: "-60px", left: "-60px", width: "260px", height: "260px", borderRadius: "50%", background: `${GOL_ORANGE}12`, pointerEvents: "none" }} />
-
-        {/* Logo / brand */}
+    <div style={{ minHeight: "100vh", display: "flex", fontFamily: "Inter, sans-serif", color: INK }}>
+      {/* LEFT PANEL */}
+      <div style={{ flex: 1.1, background: GOL_DARK, color: "#fff", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "48px 56px", borderRight: `1px solid ${LINE}` }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "56px" }}>
-            <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: GOL_ORANGE, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <CompassIcon size={20} color="#fff" />
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "36px" }}>
+            <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: GOL_ORANGE, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <CompassIcon size={24} color="#fff" />
             </div>
-            <span style={{ color: "#fff", fontWeight: 700, fontSize: "17px", letterSpacing: "0.01em" }}>Bússola de Pessoas</span>
+            <span style={{ fontSize: "22px", fontWeight: 800, letterSpacing: "-0.02em" }}>Bússola</span>
           </div>
-
-          <h1 style={{ color: "#fff", fontWeight: 800, fontSize: "36px", lineHeight: 1.15, margin: "0 0 18px 0" }}>
-            Gestão de<br />
-            <span style={{ color: GOL_ORANGE }}>Feedback & DISC</span>
+          <h1 style={{ fontFamily: "Inter, sans-serif", fontSize: "34px", fontWeight: 800, lineHeight: 1.25, margin: "0 0 16px 0", maxWidth: "420px" }}>
+            Gestão de Feedback & Perfil Comportamental
           </h1>
           <p style={{ color: "#aaa", fontSize: "14.5px", lineHeight: 1.65, margin: 0, maxWidth: "320px" }}>
             Histórico de feedback, agenda de conversas e perfil comportamental — tudo em um só lugar para sua equipe.
           </p>
-
           <div style={{ marginTop: "40px", display: "flex", flexDirection: "column", gap: "14px" }}>
-            {[
-              { icon: "🎯", text: "Feedback estruturado por perfil DISC" },
-              { icon: "📅", text: "Agenda de conversas 1:1" },
-              { icon: "🧭", text: "Teste DISC integrado e automático" },
-            ].map((item, i) => (
+            {[{ icon: "🎯", text: "Feedback estruturado por perfil DISC" }, { icon: "📅", text: "Agenda de conversas 1:1" }, { icon: "🧩", text: "Teste DISC integrado e automático" }].map((item, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <span style={{ fontSize: "18px" }}>{item.icon}</span>
                 <span style={{ color: "#ccc", fontSize: "13.5px" }}>{item.text}</span>
@@ -445,21 +418,11 @@ function AuthScreen({ users, onLogin, onRegister }) {
             ))}
           </div>
         </div>
-
-        <p style={{ color: "#555", fontSize: "12px", margin: 0 }}>
-          © 2026 GOL Linhas Aéreas · Gestão de Pessoas
-        </p>
+        <p style={{ color: "#555", fontSize: "12px", margin: 0 }}>© 2026 GOL Linhas Aéreas — Gestão de Pessoas</p>
       </div>
 
-      {/* RIGHT PANEL – Form */}
-      <div style={{
-        flex: 1,
-        background: "#fff",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "40px 32px",
-      }}>
+      {/* RIGHT PANEL — Form */}
+      <div style={{ flex: 1, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 32px" }}>
         <div style={{ width: "100%", maxWidth: "400px" }}>
           <h2 style={{ fontWeight: 800, fontSize: "26px", margin: "0 0 4px 0" }}>
             {mode === "login" ? "Bem-vindo de volta" : "Criar conta"}
@@ -500,7 +463,12 @@ function AuthScreen({ users, onLogin, onRegister }) {
                 <input style={inputStyle} value={username} onChange={(e) => setUsername(e.target.value)} autoFocus placeholder="seu@email.com" />
               </Field>
               <Field label="Senha">
-                <input type="password" style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+                <div style={{ position: "relative" }}>
+                  <input type={showPassword ? "text" : "password"} style={{ ...inputStyle, paddingRight: "40px" }} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={bullets} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#888", display: "flex", alignItems: "center", justifyContent: "center", padding: "4px" }}>
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </Field>
               {error && <p style={{ color: "#E53935", fontSize: "13px", marginTop: "-8px", marginBottom: "12px" }}>{error}</p>}
               <Button type="submit" style={{ width: "100%", justifyContent: "center", marginTop: "6px", padding: "13px 20px", fontSize: "14px" }}>
@@ -516,7 +484,20 @@ function AuthScreen({ users, onLogin, onRegister }) {
                 <input style={inputStyle} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="seu@email.com" />
               </Field>
               <Field label="Senha">
-                <input type="password" style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+                <div style={{ position: "relative" }}>
+                  <input type={showPassword ? "text" : "password"} style={{ ...inputStyle, paddingRight: "40px" }} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={bullets} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#888", display: "flex", alignItems: "center", justifyContent: "center", padding: "4px" }}>
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </Field>
+              <Field label="Confirmar Senha">
+                <div style={{ position: "relative" }}>
+                  <input type={showConfirmPassword ? "text" : "password"} style={{ ...inputStyle, paddingRight: "40px" }} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder={bullets} />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#888", display: "flex", alignItems: "center", justifyContent: "center", padding: "4px" }}>
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </Field>
               {gestores.length > 0 && (
                 <Field label="Papel">
@@ -576,10 +557,6 @@ function AuthScreen({ users, onLogin, onRegister }) {
     </div>
   );
 }
-
-/* ---------------------------------------------------------------------- */
-/*  Dashboard                                                              */
-/* ---------------------------------------------------------------------- */
 function StatCard({ label, value, accent }) {
   return (
     <Card style={{ padding: "18px 20px", flex: 1, minWidth: "150px" }}>
