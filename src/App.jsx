@@ -1212,10 +1212,10 @@ function FeedbacksPage({ user, users, feedbacks, onCreate }) {
   const [texto, setTexto] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("todos");
 
-  const destinatarios =
-    user.role === "gestor" ? users.filter((u) => u.gestorId === user.id) : users.filter((u) => u.id === user.gestorId);
-
-  const minhas = feedbacks
+  const isAdmin = user?.role === "admin";
+  const isGestor = user?.role === "gestor" || user?.role === "admin";
+  const destinatarios = isAdmin ? users.filter((u) => u.id !== user.id) : user?.role === "gestor" ? users.filter((u) => u.gestorId === user.id) : users.filter((u) => u.id === user.gestorId);
+  const minhas = feedbacks.filter((f) => (isAdmin ? true : f.autorId === user.id || f.destinatarioId === user.id)).filter((f) => filtroTipo === "todos" || f.tipo === filtroTipo).sort((a, b) => (b.criadoEm || 0) - (a.criadoEm || 0));
     .filter((f) => f.autorId === user.id || f.destinatarioId === user.id)
     .filter((f) => filtroTipo === "todos" || f.tipo === filtroTipo)
     .sort((a, b) => b.criadoEm - a.criadoEm);
@@ -1369,10 +1369,10 @@ function AgendaPage({ user, users, agenda, onCreate, onUpdateStatus }) {
   const [hora, setHora] = useState("");
   const [notas, setNotas] = useState("");
 
-  const equipe = users.filter((u) => u.gestorId === user.id);
-  const minhaAgenda = agenda
-    .filter((a) => (user.role === "gestor" ? a.gestorId === user.id : a.colaboradorId === user.id))
-    .sort((a, b) => (a.data + a.hora).localeCompare(b.data + b.hora));
+  const isAdmin = user?.role === "admin";
+  const isGestor = user?.role === "gestor" || user?.role === "admin";
+  const equipe = isAdmin ? users.filter((u) => u.id !== user.id) : users.filter((u) => u.gestorId === user.id);
+  const minhaAgenda = agenda.filter((a) => (isAdmin ? true : isGestor ? a.gestorId === user.id : a.colaboradorId === user.id)).sort((a, b) => ((a.data || "") + (a.hora || "")).localeCompare((b.data || "") + (b.hora || "")));
 
   const submit = (e) => {
     e.preventDefault();
@@ -1404,7 +1404,7 @@ function AgendaPage({ user, users, agenda, onCreate, onUpdateStatus }) {
           <h2 style={{ fontFamily: "Fraunces, serif", fontSize: "26px", fontWeight: 600, margin: "0 0 4px 0" }}>Agenda de feedback</h2>
           <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: 0 }}>Conversas marcadas e realizadas.</p>
         </div>
-        {user.role === "gestor" && equipe.length > 0 && (
+        {isGestor && equipe.length > 0 && (
           <Button onClick={() => setShowForm((s) => !s)}>
             {showForm ? <X size={16} /> : <Plus size={16} />} {showForm ? "Cancelar" : "Agendar conversa"}
           </Button>
