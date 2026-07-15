@@ -1694,9 +1694,9 @@ export default function App() {
 
   const handleSaveDisc = async (result) => {
     if (isFirebaseConfigured) {
-      await setDoc(doc(db, "discResults", currentUser.id), result);
+      if (currentUser?.id) await setDoc(doc(db, "discResults", currentUser.id), result);
     } else {
-      const updatedDisc = { ...discResults, [currentUser.id]: result };
+      if (!currentUser?.id) return; const updatedDisc = { ...discResults, [currentUser.id]: result };
       setDiscResults(updatedDisc);
       localStorage.setItem("disc_results", JSON.stringify(updatedDisc));
     }
@@ -1839,7 +1839,7 @@ export default function App() {
               <div style={{ overflow: "hidden" }}>
                 <div style={{ fontSize: "13px", fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{currentUser?.name || currentUser?.username || "Usuario"}</div>
                 <div style={{ marginTop: "4px" }}>
-                  <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", padding: "2px 7px", borderRadius: "10px", background: currentUser.role === "admin" ? "#FF6F1F" : currentUser.role === "gestor" ? "#1e3a5f" : "#2a2a2a", color: currentUser.role === "admin" ? "#fff" : currentUser.role === "gestor" ? "#8BB8D4" : "#888", border: "1px solid " + (currentUser.role === "admin" ? "#FF6F1F66" : currentUser.role === "gestor" ? "#35577A66" : "#333") }}>{currentUser.role === "admin" ? "ADMIN" : currentUser.role === "gestor" ? "GESTOR" : "COLABORADOR"}</span>
+                  <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", padding: "2px 7px", borderRadius: "10px", background: currentUser?.role === "admin" ? "#FF6F1F" : currentUser?.role === "gestor" ? "#1e3a5f" : "#2a2a2a", color: currentUser?.role === "admin" ? "#fff" : currentUser?.role === "gestor" ? "#8BB8D4" : "#888", border: "1px solid " + (currentUser?.role === "admin" ? "#FF6F1F66" : currentUser?.role === "gestor" ? "#35577A66" : "#333") }}>{currentUser?.role === "admin" ? "ADMIN" : currentUser?.role === "gestor" ? "GESTOR" : "COLABORADOR"}</span>
                 </div>
               </div>
             </div>
@@ -1880,7 +1880,7 @@ export default function App() {
             <AgendaPage user={currentUser} users={users} agenda={agenda} onCreate={handleCreateAgenda} onUpdateStatus={handleUpdateAgendaStatus} />
           )}
           {page === "disc" && currentUser?.role === "colaborador" && (
-            <DiscPage user={currentUser} discResult={discResults[currentUser.id]} onSave={handleSaveDisc} />
+            <DiscPage user={currentUser} discResult={currentUser?.id ? discResults[currentUser.id] : null} onSave={handleSaveDisc} />
           )}
           {page === "guiaDisc" && (currentUser?.role === "gestor" || currentUser?.role === "admin") && (
             <GuiaDiscPage />
