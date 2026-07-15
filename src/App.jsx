@@ -597,7 +597,7 @@ function Dashboard({ user, users, feedbacks, agenda, discResults, goTo }) {
   const isAdmin = user?.role === "admin";
   const isGestor = user?.role === "gestor" || user?.role === "admin";
   const userId = user?.id || "";
-        {isAdmin ? "Painel Administrativo" : ("Ola, " + firstName)}
+  const firstName = user?.name ? user.name.split(" ")[0] : (user?.email?.split("@")[0] || "Usuario");
 
   const equipe = isAdmin ? users.filter((u) => u.role === "colaborador") : users.filter((u) => u.gestorId === userId);
   const meusFeedbacks = isAdmin ? feedbacks : feedbacks.filter((f) => f.autorId === userId || f.destinatarioId === userId);
@@ -605,6 +605,10 @@ function Dashboard({ user, users, feedbacks, agenda, discResults, goTo }) {
     .filter((a) => (isAdmin ? true : isGestor ? a.gestorId === userId : a.colaboradorId === userId) && a.status === "Agendado")
     .sort((a, b) => ((a.data || "") + (a.hora || "")).localeCompare((b.data || "") + (b.hora || "")))
     .slice(0, 4);
+
+  return (
+    <div>
+      <h2 style={{ fontFamily: "Inter, sans-serif", fontSize: "26px", fontWeight: 800, margin: "0 0 4px 0" }}>
         {isAdmin ? "Painel Administrativo" : ("Ola, " + firstName)}
       </h2>
       <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 22px 0" }}>
