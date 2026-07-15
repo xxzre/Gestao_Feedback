@@ -1677,14 +1677,14 @@ function ConfiguracoesPage({ user, onUpdateUser }) {
         photoURL,
       };
       if (isFirebaseConfigured && auth.currentUser) {
-        if (nome.trim() !== (user?.name || "") || photoURL !== (user?.photoURL || "")) {
-          await updateProfile(auth.currentUser, { displayName: nome.trim(), photoURL });
-        }
-        if (email.trim().toLowerCase() !== (user?.email || "").toLowerCase()) {
-          await updateEmail(auth.currentUser, email.trim().toLowerCase());
-        }
-        if (newPassword) {
-          await updatePassword(auth.currentUser, newPassword);
+        try {
+          const authPhoto = photoURL.startsWith("data:image") ? null : photoURL;
+          if (nome.trim() !== (user?.name || "") || (authPhoto && authPhoto !== (user?.photoURL || ""))) {
+            await updateProfile(auth.currentUser, { displayName: nome.trim(), photoURL: authPhoto });
+          } else if (nome.trim() !== (user?.name || "")) {
+            await updateProfile(auth.currentUser, { displayName: nome.trim() });
+          }
+        } catch (e) { console.warn("Auth profile sync notice:", e); }
         }
         await updateDoc(doc(db, "users", user.id), updates);
       } else {
