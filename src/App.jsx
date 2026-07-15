@@ -50,7 +50,7 @@ const GOL_SIDEBAR_HOVER = "#242424";
 
 // Semantic aliases (keeping old names for backward compat)
 const INK = "#1A1A1A";
-const PAPER = "#F5F5F5";
+const PAPER = "#F0F2F5";
 const PAPER_RAISED = "#FFFFFF";
 const LINE = "#E8E8E8";
 const NAVY = GOL_ORANGE;
@@ -447,7 +447,7 @@ function AuthScreen({ users, onLogin, onRegister }) {
         </div>
 
         <p style={{ color: "#555", fontSize: "12px", margin: 0 }}>
-          © 2025 GOL Linhas Aéreas · Gestão de Pessoas
+          © 2026 GOL Linhas Aéreas · Gestão de Pessoas
         </p>
       </div>
 
@@ -521,7 +521,7 @@ function AuthScreen({ users, onLogin, onRegister }) {
               {gestores.length > 0 && (
                 <Field label="Papel">
                   <div style={{ display: "flex", gap: "8px" }}>
-                    {["colaborador", "gestor"].map((r) => (
+                    {["colaborador", "gestor", "admin"].map((r) => (
                       <button
                         type="button"
                         key={r}
@@ -540,7 +540,7 @@ function AuthScreen({ users, onLogin, onRegister }) {
                           transition: "all .2s",
                         }}
                       >
-                        {r === "colaborador" ? "Colaborador" : "Gestor"}
+                        {r === "colaborador" ? "Colaborador" : r === "gestor" ? "Gestor" : "Admin"}
                       </button>
                     ))}
                   </div>
@@ -604,15 +604,21 @@ function Dashboard({ user, users, feedbacks, agenda, discResults, goTo }) {
 
   return (
     <div>
-      <h2 style={{ fontFamily: "Fraunces, serif", fontSize: "26px", fontWeight: 600, margin: "0 0 4px 0" }}>
-        Olá, {user.name.split(" ")[0]}
+      <h2 style={{ fontFamily: "Inter, sans-serif", fontSize: "26px", fontWeight: 800, margin: "0 0 4px 0" }}>
+        {isAdmin ? "Painel Administrativo" : ("Ola, " + user.name.split(" ")[0])}
       </h2>
       <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 22px 0" }}>
-        {isGestor ? "Panorama da sua equipe hoje." : "Seu panorama de desenvolvimento."}
+        {isAdmin ? "Visao completa de toda a empresa." : isGestor ? "Panorama da sua equipe hoje." : "Seu panorama de desenvolvimento."}
       </p>
-
       <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", marginBottom: "22px" }}>
-        {isGestor ? (
+        {isAdmin ? (
+          <>
+            <StatCard label="Colaboradores" value={users.filter((u) => u.role === "colaborador").length} />
+            <StatCard label="Gestores" value={users.filter((u) => u.role === "gestor").length} accent="#35577A" />
+            <StatCard label="Feedbacks totais" value={feedbacks.length} accent="#3F7A5E" />
+            <StatCard label="Agendamentos" value={agenda.filter((a) => a.status === "Agendado").length} accent="#C8952B" />
+          </>
+        ) : isGestor ? (
           <>
             <StatCard label="Colaboradores" value={equipe.length} />
             <StatCard label="Feedbacks dados" value={feedbacks.filter((f) => f.autorId === user.id).length} accent="#3F7A5E" />
@@ -622,9 +628,10 @@ function Dashboard({ user, users, feedbacks, agenda, discResults, goTo }) {
           <>
             <StatCard label="Feedbacks recebidos" value={feedbacks.filter((f) => f.destinatarioId === user.id).length} />
             <StatCard label="Agendados" value={agenda.filter((a) => a.colaboradorId === user.id && a.status === "Agendado").length} accent="#C8952B" />
-            <StatCard label="Teste DISC" value={discResults[user.id] ? "Concluído" : "Pendente"} accent={discResults[user.id] ? "#3F7A5E" : "#B23A2E"} />
+            <StatCard label="Teste DISC" value={discResults[user.id] ? "Concluido" : "Pendente"} accent={discResults[user.id] ? "#3F7A5E" : "#B23A2E"} />
           </>
         )}
+      </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "16px" }} className="dash-grid">
@@ -694,8 +701,8 @@ function Dashboard({ user, users, feedbacks, agenda, discResults, goTo }) {
 /*  Colaboradores (gestor)                                                 */
 /* ---------------------------------------------------------------------- */
 function ColaboradoresPage({ user, users, discResults }) {
-  const equipe = users.filter((u) => u.gestorId === user.id);
-  return (
+  const isAdmin = user.role === "admin";
+  const equipe = isAdmin ? users.filter((u) => u.role === "colaborador") : users.filter((u) => u.gestorId === user.id);
     <div>
       <h2 style={{ fontFamily: "Fraunces, serif", fontSize: "26px", fontWeight: 600, margin: "0 0 4px 0" }}>Colaboradores</h2>
       <p style={{ color: NAVY_SOFT, fontSize: "14px", margin: "0 0 22px 0" }}>Sua equipe e o perfil comportamental de cada pessoa.</p>
@@ -735,6 +742,69 @@ function ColaboradoresPage({ user, users, discResults }) {
     </div>
   );
 }
+/* ---------------------------------------------------------------------- */
+/*  Gestores (admin)                                                       */
+/* ---------------------------------------------------------------------- */
+function GestoresPage({ users, discResults, feedbacks }) {
+  const gestores = users.filter((u) => u.role === "gestor");
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "4px" }}>
+        <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "linear-gradient(135deg, #FF6F1F, #D95A10)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <ShieldCheck size={18} color="#fff" />
+        </div>
+        <h2 style={{ fontFamily: "Inter, sans-serif", fontSize: "24px", fontWeight: 800, margin: 0 }}>Gestores</h2>
+      </div>
+      <p style={{ color: "#888", fontSize: "14px", margin: "0 0 24px 0" }}>Visao geral de todos os gestores e suas equipes.</p>
+      {gestores.length === 0 ? (
+        <Card style={{ padding: "28px", textAlign: "center", color: "#888" }}>Nenhum gestor cadastrado ainda.</Card>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {gestores.map((g) => {
+            const equipe = users.filter((u) => u.gestorId === g.id);
+            const fbCount = feedbacks.filter((f) => f.autorId === g.id).length;
+            return (
+              <Card key={g.id} style={{ padding: "20px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: equipe.length > 0 ? "16px" : "0" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "linear-gradient(135deg, #FF6F1F, #D95A10)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <span style={{ color: "#fff", fontWeight: 700, fontSize: "15px" }}>{g.name.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: "15px" }}>{g.name}</div>
+                      <div style={{ fontSize: "12px", color: "#888" }}>{g.email || g.username || ""}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <span style={{ background: "#FFF5F0", color: "#FF6F1F", border: "1px solid #FF6F1F33", fontSize: "12px", fontWeight: 600, padding: "4px 10px", borderRadius: "20px" }}>{equipe.length} colaborador{equipe.length !== 1 ? "es" : ""}</span>
+                    <span style={{ background: "#F0FAF5", color: "#3F7A5E", border: "1px solid #3F7A5E33", fontSize: "12px", fontWeight: 600, padding: "4px 10px", borderRadius: "20px" }}>{fbCount} feedback{fbCount !== 1 ? "s" : ""}</span>
+                  </div>
+                </div>
+                {equipe.length > 0 && (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "8px" }}>
+                    {equipe.map((col) => {
+                      const res = discResults[col.id];
+                      return (
+                        <div key={col.id} style={{ background: "#F8F8F8", borderRadius: "8px", padding: "10px 12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                          <UserCircle2 size={20} color="#888" />
+                          <div>
+                            <div style={{ fontSize: "13px", fontWeight: 600 }}>{col.name}</div>
+                            {res && <Badge color={DISC_INFO[res.dominante].cor}>{res.dominante}</Badge>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 /* ---------------------------------------------------------------------- */
 /*  Guia DISC (gestor) - Sub-abas                                          */
@@ -1692,7 +1762,7 @@ export default function App() {
 
         {/* ── DARK SIDEBAR ── */}
         <div className="app-sidebar" style={{
-          width: "240px",
+          width: "260px",
           minHeight: "100vh",
           background: GOL_SIDEBAR,
           display: "flex",
@@ -1766,7 +1836,9 @@ export default function App() {
               </div>
               <div style={{ overflow: "hidden" }}>
                 <div style={{ fontSize: "13px", fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{currentUser.name}</div>
-                <div style={{ fontSize: "11px", color: "#666", textTransform: "capitalize" }}>{currentUser.role}</div>
+                <div style={{ marginTop: "4px" }}>
+                  <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", padding: "2px 7px", borderRadius: "10px", background: currentUser.role === "admin" ? "#FF6F1F" : currentUser.role === "gestor" ? "#1e3a5f" : "#2a2a2a", color: currentUser.role === "admin" ? "#fff" : currentUser.role === "gestor" ? "#8BB8D4" : "#888", border: "1px solid " + (currentUser.role === "admin" ? "#FF6F1F66" : currentUser.role === "gestor" ? "#35577A66" : "#333") }}>{currentUser.role === "admin" ? "ADMIN" : currentUser.role === "gestor" ? "GESTOR" : "COLABORADOR"}</span>
+                </div>
               </div>
             </div>
             <button
