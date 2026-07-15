@@ -1603,6 +1603,11 @@ function DiscPage({ user, discResult, onSave }) {
   const [step, setStep] = useState(0);
   const [testing, setTesting] = useState(!discResult);
 
+  useEffect(() => {
+    if (discResult) {
+      setTesting(false);
+    }
+  }, [discResult]);
   const setPick = (kind, letra) => {
     setAnswers((prev) => {
       const next = [...prev];
