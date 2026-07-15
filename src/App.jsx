@@ -677,7 +677,6 @@ function Dashboard({ user, users, feedbacks, agenda, discResults, goTo }) {
         ) : isGestor ? (
           <>
             <StatCard label="Colaboradores" value={equipe.length} />
-            <StatCard label="Feedbacks dados" value={feedbacks.filter((f) => f.autorId === user.id).length} accent="#3F7A5E" />
             <StatCard label="Agendados" value={agenda.filter((a) => a.gestorId === user.id && a.status === "Agendado").length} accent="#C8952B" />
           </>
         ) : (
@@ -729,7 +728,6 @@ function Dashboard({ user, users, feedbacks, agenda, discResults, goTo }) {
             <p style={{ color: NAVY_SOFT, fontSize: "13.5px" }}>Nenhum feedback registrado ainda.</p>
           ) : (
             meusFeedbacks
-              .sort((a, b) => b.criadoEm - a.criadoEm)
               .slice(0, 4)
               .map((f) => {
                 const tipo = FEEDBACK_TIPOS.find((t) => t.id === f.tipo) || FEEDBACK_TIPOS[0];
@@ -1216,9 +1214,6 @@ function FeedbacksPage({ user, users, feedbacks, onCreate }) {
   const isGestor = user?.role === "gestor" || user?.role === "admin";
   const destinatarios = isAdmin ? users.filter((u) => u.id !== user.id) : user?.role === "gestor" ? users.filter((u) => u.gestorId === user.id) : users.filter((u) => u.id === user.gestorId);
   const minhas = feedbacks.filter((f) => (isAdmin ? true : f.autorId === user.id || f.destinatarioId === user.id)).filter((f) => filtroTipo === "todos" || f.tipo === filtroTipo).sort((a, b) => (b.criadoEm || 0) - (a.criadoEm || 0));
-    .filter((f) => f.autorId === user.id || f.destinatarioId === user.id)
-    .filter((f) => filtroTipo === "todos" || f.tipo === filtroTipo)
-    .sort((a, b) => b.criadoEm - a.criadoEm);
 
   const submit = (e) => {
     e.preventDefault();
