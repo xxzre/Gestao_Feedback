@@ -117,6 +117,11 @@ function MessageCircleIcon({ size = 18 }) {
   );
 }
 
+const getDirectChatId = (uid1, uid2) => {
+  const sorted = [uid1, uid2].sort();
+  return `direct_${sorted[0]}_${sorted[1]}`;
+};
+
 function UsersGroupIcon({ size = 18 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1865,23 +1870,14 @@ function ChatPage({ user, users }) {
       const list = [];
       snap.forEach((docSnap) => {
         const data = docSnap.data();
-        if (data.participantes && data.participantes.includes(user.id)) {
-          list.push({ id: docSnap.id, ...data });
-        }
+        list.push({ id: docSnap.id, ...data });
       });
       list.sort((a, b) => (b.atualizadoEm || 0) - (a.atualizadoEm || 0));
-      setChats((prev) => {
-        const map = new Map();
-        prev.forEach((item) => map.set(item.id, item));
-        list.forEach((item) => map.set(item.id, item));
-        const merged = Array.from(map.values());
-        merged.sort((a, b) => (b.atualizadoEm || 0) - (a.atualizadoEm || 0));
-        return merged;
-      });
+      setChats(list);
       if (list.length > 0 && !activeChatId) {
         setActiveChatId(list[0].id);
       }
-    });
+    }, (err) => console.warn("Snapshot chats error:", err));
     return () => unsub();
   }, [user?.id]);
 
@@ -1895,7 +1891,7 @@ function ChatPage({ user, users }) {
       });
       mList.sort((a, b) => (a.criadoEm || 0) - (b.criadoEm || 0));
       setMessages(mList);
-    });
+    }, (err) => console.warn("Snapshot msgs error:", err));
     return () => unsubMsgs();
   }, [activeChatId]);
 
@@ -1903,14 +1899,9 @@ function ChatPage({ user, users }) {
 
   const startDirectChat = async (targetUser) => {
     setShowNewDirectModal(false);
-    const existing = chats.find((c) => c.tipo === "direta" && c.participantes.includes(targetUser.id));
-    if (existing) {
-      setActiveChatId(existing.id);
-      return;
-    }
-    const newChatId = uid();
+    const directChatId = getDirectChatId(user.id, targetUser.id);
     const chatData = {
-      id: newChatId,
+      id: directChatId,
       tipo: "direta",
       participantes: [user.id, targetUser.id],
       participantesInfo: {
@@ -1921,12 +1912,17 @@ function ChatPage({ user, users }) {
       atualizadoEm: Date.now(),
       ultimaMensagem: "Conversa iniciada",
     };
-    setChats((prev) => [chatData, ...prev.filter((c) => c.id !== newChatId)]);
-    setActiveChatId(newChatId);
+    setChats((prev) => {
+      const map = new Map();
+      prev.forEach((c) => map.set(c.id, c));
+      map.set(directChatId, { ...map.get(directChatId), ...chatData });
+      return Array.from(map.values());
+    });
+    setActiveChatId(directChatId);
     if (isFirebaseConfigured) {
       try {
-        await setDoc(doc(db, "chats", newChatId), chatData);
-      } catch (e) { console.warn("Chat doc sync notice:", e); }
+        await setDoc(doc(db, "chats", directChatId), chatData, { merge: true });
+      } catch (e) { console.warn("Direct chat doc set notice:", e); }
     }
   };
 
@@ -1979,16 +1975,16 @@ function ChatPage({ user, users }) {
       texto: txt,
       criadoEm: Date.now(),
     };
-    setMessages((prev) => [...prev, msgData]);
-    setChats((prev) => prev.map((c) => c.id === activeChatId ? { ...c, ultimaMensagem: txt, atualizadoEm: Date.now() } : c));
     if (isFirebaseConfigured) {
       try {
-        await addDoc(collection(db, "chats", activeChatId, "messages"), msgData);
+        await setDoc(doc(db, "chats", activeChatId, "messages", newMsgId), msgData);
         await updateDoc(doc(db, "chats", activeChatId), {
           ultimaMensagem: txt,
           atualizadoEm: Date.now(),
         });
-      } catch (e) { console.warn("Message doc sync notice:", e); }
+      } catch (e) { console.warn("Send message doc sync notice:", e); }
+    } else {
+      setMessages((prev) => [...prev, msgData]);
     }
   };
   const getChatDisplay = (chat) => {
