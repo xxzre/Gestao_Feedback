@@ -1722,6 +1722,15 @@ export default function App() {
     return base;
   }, [currentUser]);
 
+  useEffect(() => {
+    if (currentUser && navItems.length > 0) {
+      const isValid = navItems.some((item) => item.id === page);
+      if (!isValid) {
+        setPage("dashboard");
+      }
+    }
+  }, [currentUser, navItems, page]);
+
   if (loading) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: GOL_SIDEBAR, fontFamily: "Inter, sans-serif" }}>
