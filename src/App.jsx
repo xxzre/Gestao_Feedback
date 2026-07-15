@@ -1868,7 +1868,14 @@ function ChatPage({ user, users }) {
         }
       });
       list.sort((a, b) => (b.atualizadoEm || 0) - (a.atualizadoEm || 0));
-      setChats(list);
+      setChats((prev) => {
+        const map = new Map();
+        prev.forEach((item) => map.set(item.id, item));
+        list.forEach((item) => map.set(item.id, item));
+        const merged = Array.from(map.values());
+        merged.sort((a, b) => (b.atualizadoEm || 0) - (a.atualizadoEm || 0));
+        return merged;
+      });
       if (list.length > 0 && !activeChatId) {
         setActiveChatId(list[0].id);
       }
@@ -1901,6 +1908,7 @@ function ChatPage({ user, users }) {
     }
     const newChatId = uid();
     const chatData = {
+      id: newChatId,
       tipo: "direta",
       participantes: [user.id, targetUser.id],
       participantesInfo: {
@@ -1911,10 +1919,13 @@ function ChatPage({ user, users }) {
       atualizadoEm: Date.now(),
       ultimaMensagem: "Conversa iniciada",
     };
-    if (isFirebaseConfigured) {
-      await setDoc(doc(db, "chats", newChatId), chatData);
-    }
+    setChats((prev) => [chatData, ...prev.filter((c) => c.id !== newChatId)]);
     setActiveChatId(newChatId);
+    if (isFirebaseConfigured) {
+      try {
+        await setDoc(doc(db, "chats", newChatId), chatData);
+      } catch (e) { console.warn("Chat doc sync notice:", e); }
+    }
   };
 
   const handleCreateGroup = async (e) => {
@@ -1931,6 +1942,7 @@ function ChatPage({ user, users }) {
     });
     const newGroupId = uid();
     const groupData = {
+      id: newGroupId,
       tipo: "grupo",
       nome: groupName.trim(),
       criadorId: user.id,
@@ -1940,12 +1952,15 @@ function ChatPage({ user, users }) {
       atualizadoEm: Date.now(),
       ultimaMensagem: "Grupo criado",
     };
-    if (isFirebaseConfigured) {
-      await setDoc(doc(db, "chats", newGroupId), groupData);
-    }
+    setChats((prev) => [groupData, ...prev.filter((c) => c.id !== newGroupId)]);
+    setActiveChatId(newGroupId);
     setGroupName("");
     setSelectedGroupMembers([]);
-    setActiveChatId(newGroupId);
+    if (isFirebaseConfigured) {
+      try {
+        await setDoc(doc(db, "chats", newGroupId), groupData);
+      } catch (e) { console.warn("Group doc sync notice:", e); }
+    }
   };
 
   const sendMessage = async (e) => {
@@ -1953,22 +1968,27 @@ function ChatPage({ user, users }) {
     if (!newMessageText.trim() || !activeChatId) return;
     const txt = newMessageText.trim();
     setNewMessageText("");
+    const newMsgId = uid();
     const msgData = {
+      id: newMsgId,
       remetenteId: user.id,
       remetenteNome: user.name,
       remetentePhotoURL: user.photoURL || "",
       texto: txt,
       criadoEm: Date.now(),
     };
+    setMessages((prev) => [...prev, msgData]);
+    setChats((prev) => prev.map((c) => c.id === activeChatId ? { ...c, ultimaMensagem: txt, atualizadoEm: Date.now() } : c));
     if (isFirebaseConfigured) {
-      await addDoc(collection(db, "chats", activeChatId, "messages"), msgData);
-      await updateDoc(doc(db, "chats", activeChatId), {
-        ultimaMensagem: txt,
-        atualizadoEm: Date.now(),
-      });
+      try {
+        await addDoc(collection(db, "chats", activeChatId, "messages"), msgData);
+        await updateDoc(doc(db, "chats", activeChatId), {
+          ultimaMensagem: txt,
+          atualizadoEm: Date.now(),
+        });
+      } catch (e) { console.warn("Message doc sync notice:", e); }
     }
   };
-
   const getChatDisplay = (chat) => {
     if (!chat) return { nome: "", photoURL: "", badge: "" };
     if (chat.tipo === "grupo") {
