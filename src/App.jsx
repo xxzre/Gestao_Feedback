@@ -2101,15 +2101,15 @@ export default function App() {
           {/* User info + logout */}
           <div style={{ borderTop: "1px solid #2a2a2a", paddingTop: "16px", marginTop: "14px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-              <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: GOL_ORANGE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <span style={{ color: "#fff", fontWeight: 700, fontSize: "13px" }}>
-                  {(currentUser?.name || currentUser?.username || "U").charAt(0).toUpperCase()}
-                </span>
+              <div style={{ width: "34px", height: "34px", borderRadius: "50%", background: GOL_ORANGE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden", border: currentUser?.photoURL ? `1.5px solid ${GOL_ORANGE}` : "none" }}>
+                {currentUser?.photoURL ? (
+                  <img src={currentUser.photoURL} alt="Perfil" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <span style={{ color: "#fff", fontWeight: 700, fontSize: "13px" }}>
+                    {(currentUser?.name || currentUser?.username || "U").charAt(0).toUpperCase()}
+                  </span>
+                )}
               </div>
-              <div style={{ overflow: "hidden" }}>
-                <div style={{ fontSize: "13px", fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{currentUser?.name || currentUser?.username || "Usuario"}</div>
-                <div style={{ marginTop: "4px" }}>
-                  <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", padding: "2px 7px", borderRadius: "10px", background: currentUser?.role === "admin" ? "#FF6F1F" : currentUser?.role === "gestor" ? "#1e3a5f" : "#2a2a2a", color: currentUser?.role === "admin" ? "#fff" : currentUser?.role === "gestor" ? "#8BB8D4" : "#888", border: "1px solid " + (currentUser?.role === "admin" ? "#FF6F1F66" : currentUser?.role === "gestor" ? "#35577A66" : "#333") }}>{currentUser?.role === "admin" ? "ADMIN" : currentUser?.role === "gestor" ? "GESTOR" : "COLABORADOR"}</span>
                 </div>
               </div>
             </div>
