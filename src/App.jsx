@@ -2080,24 +2080,19 @@ export default function App() {
   const navItems = useMemo(() => {
     const role = (currentUser?.role || "").toLowerCase();
     const base = [
+      { id: "dashboard", label: "Painel", icon: LayoutDashboard },
       { id: "colaboradores", label: role === "colaborador" ? "Colegas de Equipe" : "Colaboradores", icon: Users },
-      // chat item removed per user request
+      { id: "feedbacks", label: "Feedbacks", icon: MessageSquareText },
       { id: "agenda", label: "Agenda", icon: CalendarClock },
     ];
     if (role === "gestor" || role === "admin") {
-      // colaboradores added by default in base array
-      if (role === "admin") {
-        base.splice(2, 0, { id: "gestores", label: "Gestores", icon: ShieldCheck });
-      }
+      base.splice(2, 0, { id: "gestores", label: "Gestores", icon: ShieldCheck });
       base.push({ id: "guiaDisc", label: "Como Lidar (DISC)", icon: BookOpen });
     }
-    if (role === "colaborador") {
-      base.push({ id: "disc", label: "Teste DISC", icon: CompassIcon });
-    }
+    base.push({ id: "disc", label: "Teste DISC", icon: CompassIcon });
     base.push({ id: "configuracoes", label: "Configuracoes", icon: SettingsIcon });
     return base;
   }, [currentUser]);
-
   useEffect(() => {
     if (currentUser && navItems.length > 0) {
       const isValid = navItems.some((item) => item.id === page);
@@ -2254,7 +2249,7 @@ export default function App() {
           {page === "colaboradores" && (
             <ColaboradoresPage user={currentUser} users={users} discResults={discResults} />
           )}
-          {page === "gestores" && currentUser?.role === "admin" && (
+          {page === "gestores" && (currentUser?.role === "gestor" || currentUser?.role === "admin") && (
             <GestoresPage users={users} discResults={discResults} feedbacks={feedbacks} />
           )}
           {page === "feedbacks" && (
@@ -2263,7 +2258,7 @@ export default function App() {
           {page === "agenda" && (
             <AgendaPage user={currentUser} users={users} agenda={agenda} onCreate={handleCreateAgenda} onUpdateStatus={handleUpdateAgendaStatus} />
           )}
-          {page === "disc" && currentUser?.role === "colaborador" && (
+          {page === "disc" && (
             <DiscPage user={currentUser} discResult={currentUser?.id ? discResults[currentUser.id] : null} onSave={handleSaveDisc} />
           )}
           {page === "guiaDisc" && (currentUser?.role === "gestor" || currentUser?.role === "admin") && (
