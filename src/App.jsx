@@ -490,14 +490,10 @@ function AuthScreen({ users, onLogin, onRegister }) {
                 }}
               >
                 {m === "login" ? "Entrar" : "Criar conta"}
-              </button>
-            ))}
-          </div>
-
-          {mode === "login" ? (
+              {mode === "login" ? (
             <form onSubmit={handleLogin}>
-              <Field label="Usuário">
-                <input style={inputStyle} value={username} onChange={(e) => setUsername(e.target.value)} autoFocus placeholder="seu.usuario" />
+              <Field label="E-mail">
+                <input style={inputStyle} value={username} onChange={(e) => setUsername(e.target.value)} autoFocus placeholder="seu@email.com" />
               </Field>
               <Field label="Senha">
                 <input type="password" style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
@@ -512,11 +508,13 @@ function AuthScreen({ users, onLogin, onRegister }) {
               <Field label="Nome completo">
                 <input style={inputStyle} value={nome} onChange={(e) => setNome(e.target.value)} autoFocus placeholder="Seu nome completo" />
               </Field>
-              <Field label="Usuário">
-                <input style={inputStyle} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="nome.sobrenome" />
+              <Field label="E-mail">
+                <input style={inputStyle} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="seu@email.com" />
               </Field>
               <Field label="Senha">
                 <input type="password" style={inputStyle} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+              </Field>
+              {gestores.length > 0 && (�•••••••" />
               </Field>
               {gestores.length > 0 && (
                 <Field label="Papel">
